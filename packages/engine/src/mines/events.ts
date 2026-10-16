@@ -6,9 +6,9 @@ import type { GameOverReason, GameResult } from "./state";
  * Structured record of what happened during a move: enough for UI narration, animations
  * and the Moves dialog. Public events only; nothing here reveals an unexploded mine.
  *
- * Reserved for later milestones: Reshuffled (M7) and the server-only MineRelocated (M7).
+ * Public events only, except MineRelocated, which is server-only.
  */
-export type GameEvent =
+export type PublicEvent =
   | { readonly type: "MoveMade"; readonly color: Color; readonly move: Move }
   | { readonly type: "PieceCaptured"; readonly square: Square; readonly piece: PieceType }
   | { readonly type: "MineTriggered"; readonly square: Square; readonly by: Piece }
@@ -30,4 +30,22 @@ export type GameEvent =
       readonly result: GameResult;
       readonly reason: GameOverReason;
     }
-  | { readonly type: "TurnPassed"; readonly to: Color };
+  | { readonly type: "TurnPassed"; readonly to: Color }
+  | { readonly type: "Reshuffled"; readonly mineCount: number };
+
+/**
+ * Events only the server may see. The client projection must never forward them: they
+ * reveal hidden mine positions.
+ */
+export interface ServerOnlyEvent {
+  readonly type: "MineRelocated";
+  readonly from: Square;
+  /** Where the mine went, or null if no square existed and it was removed (3.1). */
+  readonly to: Square | null;
+}
+
+export type GameEvent = PublicEvent | ServerOnlyEvent;
+
+export function isPublicEvent(event: GameEvent): event is PublicEvent {
+  return event.type !== "MineRelocated";
+}

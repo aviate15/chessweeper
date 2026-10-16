@@ -93,7 +93,7 @@ function checkInvariants(state: GameState, initialMines: number): void {
   // 3.6: no moves are accepted after the game is over.
   const first = moves[0];
   if (status.kind === "over" && first !== undefined) {
-    expect(() => resolveMove(state, first)).toThrow(GameOverError);
+    expect(() => resolveMove(state, first, createSeededRng(1))).toThrow(GameOverError);
   }
 }
 
@@ -119,7 +119,7 @@ function playRandomly(start: GameState, choices: readonly number[], tally: Tally
 
     const before = snapshot(state);
     const fullmoveBefore = state.position.fullmoveNumber;
-    const result = resolveMove(state, move);
+    const result = resolveMove(state, move, createSeededRng(1));
     expect(snapshot(state)).toBe(before); // inputs are never mutated
     state = result.state;
 

@@ -2,6 +2,7 @@ import { applyMove } from "../chess/apply";
 import { castleRookSquares, type Move } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
 import type { Piece } from "../chess/types";
+import type { Rng } from "./rng";
 import type { GameEvent } from "./events";
 import { finishTurn } from "./endturn";
 import { resolveLanding, type Working } from "./landing";
@@ -37,7 +38,8 @@ export interface Resolution {
  * - captures never hit mines (3.5).
  * Immutable: returns a new state and the events, leaving the input untouched.
  */
-export function resolveMove(state: GameState, move: Move): Resolution {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- used from the next commit
+export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution {
   if (state.public.status.kind === "over") throw new GameOverError();
   const legal = legalMoves(state.position).find(
     (m) => m.from === move.from && m.to === move.to && m.promotion === move.promotion,
@@ -93,7 +95,7 @@ export function resolveMove(state: GameState, move: Move): Resolution {
         status: end.status,
         checkException: end.checkException,
       },
-      hidden: { mines: work.mines },
+      hidden: { ...state.hidden, mines: work.mines },
     },
     events: work.events,
   };

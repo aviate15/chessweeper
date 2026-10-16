@@ -47,4 +47,9 @@ export interface PublicState {
 export interface HiddenState {
   /** Live mine squares. Never exposed to clients. */
   readonly mines: ReadonlySet<Square>;
+  /**
+   * Whether each side still has its safe first move (design doc 3.1). Engine bookkeeping;
+   * clients never need it.
+   */
+  readonly safeStart: { readonly w: boolean; readonly b: boolean };
 }
