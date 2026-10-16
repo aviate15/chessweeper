@@ -17,7 +17,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - **Tension and progress for both sides.** Danger is shared; nobody gets a free ride.
 - **Guessing and deduction, not chaos.** Mines are sparse: enough to keep players guessing.
 - **Minesweeper skill is tested.** Numbers are public, flags are private.
-- **Danger never runs out.** Concern: if the mines in ranks 3-6 get exhausted, the game becomes plain chess. The full reset every 6 turns keeps danger alive and keeps covering new positions as the game moves on.
+- **Danger never runs out.** Concern: if the mines in ranks 3-6 get exhausted, the game becomes plain chess. The full reset every 8 turns keeps danger alive and keeps covering new positions as the game moves on.
 - **The game keeps moving.** The reshuffle doubles as an anti-stall mechanism.
 - **King placement is strategic.** Mined escape squares make king safety a real decision.
 - **Rules are experimental.** Expect to tune after playtesting ("we can change as we experiment").
@@ -115,12 +115,12 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 
 ### 3.7 Reshuffle (full reset, anti-stall)
 
-- `[D]` Every **6 total turns** (3 per player) without a capture, all mines are randomly reshuffled. This keeps the game moving. It replaces the original idea ("a mine flagged for more than 5 moves triggers a random reset"). Starting value, tunable after playtesting.
+- `[D]` Every **8 total turns** (4 per player) without a capture, all mines are randomly reshuffled. This keeps the game moving. It replaces the original idea ("a mine flagged for more than 5 moves triggers a random reset"). Starting value, tunable after playtesting.
 - `[D]` The counter starts at 0 at game start and resets to 0 after each reshuffle. It counts completed turns; a check-exception chain counts as one turn. Any turn in which a piece is captured resets it to 0, including an en passant capture whose capturer then explodes. A turn with an explosion counts as a normal turn and does not reset it. The counter does not change while a chain is pending or on the turn that ends the game.
 - `[D]` **Timing**: the reshuffle fires at the very end of a turn, after the whole check-exception chain and the game-end checks, and only if the game continues.
 - `[D]` Placement is **truly random**: uniform over all unoccupied squares, with no exclusions (not even near kings). Never on an occupied square. Mines may land on empty squares on ranks 1-2 and 7-8.
 - `[D]` After a reshuffle the mine count is **`mineDensity` × the free (unoccupied) squares at that moment**, rounded **half-up** (e.g. 7.5 → 8), then capped at `mineCap` if one is set. It grows denser as pieces leave the board, matching "mines everywhere in the endgame". Not just the survivors from before.
-- `[T]` Tunable config values: `mineDensity = 0.25`, `mineCap = none`, `reshuffleInterval = 6`. Add a cap if endgames get too brutal.
+- `[T]` Tunable config values: `mineDensity = 0.25`, `mineCap = none`, `reshuffleInterval = 8` (one named setting, `DEFAULT_RESHUFFLE_INTERVAL`, so per-mode values can be added later). Add a cap if endgames get too brutal.
 - `[D]` A reshuffle **re-hides all revealed numbers**, **clears all craters** (mines moved, so old craters would be stale) and **clears all private flags**.
 
 ### 3.8 Turn resolution (derived from the rules above)
@@ -132,20 +132,20 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 5. If a king reaches 0 lives, the game ends and that side loses (3.6 precedence).
 6. If an explosion left the mover's own king in check, the same side moves again (3.4). This is still the same turn: go back to step 1. No resolving move = checkmate.
 7. Otherwise the turn passes. Check, checkmate and stalemate are evaluated for the opponent.
-8. End of turn, only if the turn passed and the game continues: the no-capture counter updates (a capture resets it). At `reshuffleInterval` (6) turns a reshuffle fires and the counter resets. Events: `Reshuffled` is public; `MineRelocated` (safe start) is server-only and never sent to clients.
+8. End of turn, only if the turn passed and the game continues: the no-capture counter updates (a capture resets it). At `reshuffleInterval` (8) turns a reshuffle fires and the counter resets. Events: `Reshuffled` is public; `MineRelocated` (safe start) is server-only and never sent to clients.
 
 ---
 
 ## 4. Open questions (priority order)
 
 1. `[Q]` UI/UX brainstorm (section 6).
-2. `[T]` Tuning in playtesting: `mineDensity`, `mineCap`, the reshuffle interval (6 turns), the 3 king lives.
+2. `[T]` Tuning in playtesting: `mineDensity`, `mineCap`, the reshuffle interval (8 turns), the 3 king lives.
 
 ---
 
 ## 5. Parked: idle mines
 
-Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 6-turn full reset already covers new positions as the game goes on. The full spec is kept here in case we revive it after playtesting. None of it applies to the current version.
+Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 8-turn full reset already covers new positions as the game goes on. The full spec is kept here in case we revive it after playtesting. None of it applies to the current version.
 
 - Idea: each side's last two ranks (1-2 and 7-8) hold **idle mines** on a sparse subset of squares, under starting pieces. They are dormant and **arm** (become live) when the piece standing on them leaves. Purpose: danger grows toward the endgame ("mines everywhere"), and the board never runs out of mines.
 - Capture on an idle mine: the mine arms under the capturer and detonates immediately. The captured piece is removed, the capturer is destroyed (a king capturer loses a life and stays), the mine is consumed. A deliberate suspense mechanic and a forced trade.
@@ -163,6 +163,8 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 6-turn full res
 - `[D]` Pass-and-play: after the handoff the board flips to the side to move (default on, toggle in the Game menu). Online: own side at the bottom.
 - `[D]` Sound, generated in code with WebAudio (no asset files): move, capture, flag, reveal, explosion, king hit, check, reshuffle, game over, click. Mute toggle in the Game menu, persisted; audio starts only after the first user interaction.
 - `[D]` Animations: on a mine hit the explosion graphic and sound play first, then the handoff screen (about 800 ms at most, skippable by click or key; game state updates instantly; online play never blocks input). Also: piece slide, capture pop, number flip-reveal, reshuffle wave, king-life crack, check flash, game-over mine reveal. All respect reduced-motion.
+- `[D]` Game → Options (local play): reshuffle interval and mine density, applied at New game, so tuning needs no code change. Defaults come from the config (8 turns, 0.25).
+- `[D]` Rules page: shown on first load ("Don't show again" saved locally), reachable from a Help menu or "?" button; written from this document only. Numbers show a tooltip (what they count, which piece's landing revealed them) and a corner-badge legend.
 - `[Q]` Lobby and online flow (later milestone).
 
 ---
@@ -183,6 +185,8 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 6-turn full res
 ---
 
 ## 8. Change log
+
+- 2026-10-16: Reshuffle interval raised from 6 to 8 total turns (4 per player) after the second playtest; one named config default (`DEFAULT_RESHUFFLE_INTERVAL`) so per-mode values can be added later (3.7). Local-play Game → Options added for interval and density (section 6).
 
 - 2026-10-16: UI v2 decisions recorded in section 6 (retro skin, layout, board flip, sound, animations) after the style tile was approved.
 - 2026-10-16: Reshuffle interval lowered from 10 to 6 total turns (3 per player) after the first pass-and-play playtest; still a tunable config value (3.7).
