@@ -122,6 +122,9 @@ function open(wsUrl: string, origin: string): Promise<Client> {
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const wsUrl = args.server.replace(/^http/, "ws");
+  // One URL serving page and game (pnpm play): the client connects to <host>/ws on its own origin.
+  const sameOrigin = args.web !== null && args.web === args.server;
+  const socketUrl = sameOrigin ? `${wsUrl}/ws` : wsUrl;
   const origin = args.web ?? "https://smoke-test.invalid";
 
   await check("server /healthz is 200 ok", async () => {
@@ -131,8 +134,8 @@ async function main(): Promise<void> {
     return undefined;
   });
 
-  await check("server 404s unknown paths", async () => {
-    const res = await fetch(`${args.server}/nope`);
+  await check("server 404s unknown files", async () => {
+    const res = await fetch(`${args.server}/nope.js`);
     must(res.status === 404, `status ${String(res.status)}`);
     return undefined;
   });
@@ -147,7 +150,10 @@ async function main(): Promise<void> {
       must(res.headers.get("x-content-type-options") === "nosniff", "missing nosniff");
       const csp = res.headers.get("content-security-policy") ?? "";
       must(csp.includes("default-src 'self'"), "missing CSP");
-      must(csp.includes(new URL(wsUrl).host), "CSP does not allow the game server");
+      must(
+        sameOrigin ? csp.includes("connect-src 'self'") : csp.includes(new URL(wsUrl).host),
+        "CSP does not allow the game server",
+      );
       return undefined;
     });
 
@@ -175,7 +181,7 @@ async function main(): Promise<void> {
 
   await check("WebSocket from a foreign Origin is refused", async () => {
     try {
-      const c = await open(wsUrl, "https://evil.invalid");
+      const c = await open(socketUrl, "https://evil.invalid");
       c.ws.terminate();
     } catch (e) {
       must((e as Error).message.includes("403"), (e as Error).message);
@@ -186,11 +192,11 @@ async function main(): Promise<void> {
 
   const finished: { closed: Promise<number> | null } = { closed: null };
   await check("two players can create, join and resign; no mines in snapshots", async () => {
-    const a = await open(wsUrl, origin);
+    const a = await open(socketUrl, origin);
     a.ws.send(JSON.stringify({ type: "create_room" }));
     const ja = await a.next("joined");
     await a.next("snapshot");
-    const b = await open(wsUrl, origin);
+    const b = await open(socketUrl, origin);
     b.ws.send(JSON.stringify({ type: "join_room", code: ja.code }));
     const jb = await b.next("joined");
     await b.next("snapshot");

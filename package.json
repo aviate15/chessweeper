@@ -16,7 +16,8 @@
     "build": "pnpm -r --if-present build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "play": "env -u VITE_SERVER_URL pnpm --filter @chessweeper/web build && pnpm --filter @chessweeper/server build && pnpm --filter @chessweeper/server exec tsx scripts/play.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
