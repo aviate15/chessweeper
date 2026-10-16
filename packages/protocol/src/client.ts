@@ -29,8 +29,14 @@ const settings = z
   .strictObject({
     reshuffleInterval: z.number().int().min(-1_000_000).max(1_000_000),
     densityPercent: z.number().int().min(-1_000_000).max(1_000_000),
+    // Manual mine mode (design doc 3.10). Absent means auto.
+    mode: z.enum(["auto", "manual"]).optional(),
   })
-  .transform((raw) => clampSettings(raw));
+  .transform((raw) => {
+    const clamped = clampSettings(raw);
+    // TODO(reconcile with engine): once clampSettings carries `mode` (CONTRACT), drop this spread.
+    return raw.mode === undefined || "mode" in clamped ? clamped : { ...clamped, mode: raw.mode };
+  });
 
 export const clientMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("create_room"), settings: settings.optional() }),
@@ -42,6 +48,9 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
     to: square,
     promo: z.enum(["n", "b", "r", "q"]).optional(),
   }),
+  z.strictObject({ type: z.literal("place"), sq: square }),
+  z.strictObject({ type: z.literal("unplace"), sq: square }),
+  z.strictObject({ type: z.literal("placement_done") }),
   z.strictObject({ type: z.literal("resign") }),
   z.strictObject({ type: z.literal("draw_offer") }),
   z.strictObject({ type: z.literal("draw_reply"), accept: z.boolean() }),

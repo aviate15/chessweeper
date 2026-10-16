@@ -11,6 +11,10 @@ export const ERROR_CODES = [
   "internal",
   "forbidden",
   "not-playing",
+  "not-placing",
+  "quota-full",
+  "bad-square",
+  "already-ready",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -27,4 +31,8 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   internal: "Internal error",
   forbidden: "Not allowed",
   "not-playing": "Mines are being placed",
+  "not-placing": "Mines cannot be placed now",
+  "quota-full": "You have placed all your mines",
+  "bad-square": "That square cannot hold a mine",
+  "already-ready": "You are already ready",
 };
