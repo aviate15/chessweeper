@@ -13,6 +13,7 @@ Last updated: 2026-10-16
 Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals numbers, and things blow up.
 
 ### Design pillars
+
 - **Tension and progress for both sides.** Danger is shared; nobody gets a free ride.
 - **Guessing and deduction, not chaos.** Mines are sparse: enough to keep players guessing.
 - **Minesweeper skill is tested.** Numbers are public, flags are private.
@@ -37,6 +38,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 ## 3. Rules
 
 ### 3.1 Board and mines
+
 - `[D]` Standard chess board and pieces, plus hidden mines.
 - `[D]` Mines are **sparse**: just enough to keep players guessing.
 - `[D]` At the start, mines sit on ranks 3-6 only, on a sparse subset of squares. A mine is never under a piece. Ranks 1-2 and 7-8 start with no mines.
@@ -48,6 +50,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` Idle mines are **not part of this version** (parked, see section 5).
 
 ### 3.2 Information
+
 - `[D]` **Complete information** for revealed data: both players see the same reveals.
 - `[D]` A revealed number = count of mines in the **8 adjacent squares**.
 - `[D]` Numbers are **live**: a revealed number always shows the current count of adjacent live mines, so it goes down when a neighboring mine is consumed.
@@ -60,11 +63,13 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` **No zero flood-fill**: landing on a square with a 0 reveals only that square, not its neighbors. Revisit after playtesting (could become a toggle).
 
 ### 3.3 Flags
+
 - `[D]` Players can flag suspected mines.
 - `[D]` Flags are **private**: the opponent cannot see them.
 - `[D]` Flags are **only notes**: no rules effect, no limit, no penalty for wrong flags. They are cleared on a reshuffle (3.7).
 
 ### 3.4 Triggering a mine
+
 - `[D]` A non-king piece landing on a live mine is **destroyed**. The move is wasted (no benefit) and play passes to the opponent.
 - `[D]` The mine is consumed when triggered, for every piece type.
 - `[D]` **Check exception**: if a piece dies on a mine and that leaves the mover's **own king** in check (e.g. a blocker explodes), the mover does not lose the turn. They must immediately make another move that resolves the check: move the king, or force some other resolving move (block or capture the checker). Original wording: "if you put a bishop somewhere and it blows up and it causes a discovered check on the king, then the king gets to move".
@@ -74,6 +79,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` A triggered mine leaves a public **crater** on the square. The mine is consumed, so pieces can land on a crater safely afterwards.
 
 ### 3.5 Captures and special moves
+
 - `[D]` Normal captures never hit a mine: no mine ever sits under a piece, including after reshuffles. Only the captured piece is lost.
 - `[D]` **Castling, en passant and promotion** follow standard chess rules. If any of them lands on a mine, the piece **pays the price** like any other landing.
 - `[D]` Castling: the king's and the rook's destination squares can each hold a mine. A king there loses a life, the mine is consumed and it stays; a rook there is destroyed. Passing over squares triggers nothing.
@@ -82,6 +88,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` Promotion: if the promotion square is mined, the pawn is destroyed and does not promote.
 
 ### 3.6 Kings and game end
+
 - `[D]` Kings have **3 lives**.
 - `[D]` A king landing on a live mine loses 1 life, the **mine is consumed**, and the king **stays on that square**.
 - `[D]` If the king's only escape square is mined, the king can still go there and pays a life. Strategic king placement matters.
@@ -96,6 +103,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` Online disconnect: the disconnected player has a **60-second grace period** to reconnect. After that the opponent may claim the win.
 
 ### 3.7 Reshuffle (full reset, anti-stall)
+
 - `[D]` Every **10 total turns** (5 per player) without a capture, all mines are randomly reshuffled. This keeps the game moving. It replaces the original idea ("a mine flagged for more than 5 moves triggers a random reset"). Starting value, tunable after playtesting.
 - `[D]` The counter starts at 0 at game start and resets to 0 after each reshuffle. Only a capture resets it otherwise. A turn with an explosion counts as a normal turn and does not reset it.
 - `[D]` **Timing**: the reshuffle fires at the very end of a turn, after the whole check-exception chain and the game-end checks, and only if the game continues.
@@ -105,6 +113,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` A reshuffle **re-hides all revealed numbers**, **clears all craters** (mines moved, so old craters would be stale) and **clears all private flags**.
 
 ### 3.8 Turn resolution (derived from the rules above)
+
 1. Mover plays a chess-legal move. Hidden mines are ignored for legality. During a check-exception follow-up, the move must resolve the check.
 2. Safe start (3.1): on a side's first move of the game, a mine on the landing square is relocated first.
 3. Pieces move; a captured piece is removed.
@@ -117,12 +126,14 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 ---
 
 ## 4. Open questions (priority order)
+
 1. `[Q]` UI/UX brainstorm (section 6).
 2. `[T]` Tuning in playtesting: `mineDensity`, `mineCap`, the reshuffle interval (10 turns), the 3 king lives.
 
 ---
 
 ## 5. Parked: idle mines
+
 Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 10-turn full reset already covers new positions as the game goes on. The full spec is kept here in case we revive it after playtesting. None of it applies to the current version.
 
 - Idea: each side's last two ranks (1-2 and 7-8) hold **idle mines** on a sparse subset of squares, under starting pieces. They are dormant and **arm** (become live) when the piece standing on them leaves. Purpose: danger grows toward the endgame ("mines everywhere"), and the board never runs out of mines.
@@ -135,12 +146,14 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 10-turn full re
 ---
 
 ## 6. UI/UX (to brainstorm together, nothing decided)
+
 - Retro look: beveled gray panels, pixel art, LED counters, pixel typeface. Possible building blocks: 98.css for bevels, a 7-segment font for counters.
 - Topics: how numbers and pieces share a square; how flags are placed on desktop and mobile; what the LED counters show (flags left? mines left? turns until reshuffle?); explosion and king-life feedback; reshuffle animation; lobby and online flow.
 
 ---
 
 ## 7. Build setup (in progress)
+
 - Repo: `gh repo create chessweeper --public --clone --license mit --gitignore Node`, then `claude`, Opus in plan mode. Run `/init` after the scaffold exists, so it picks up real commands.
 - Setup kit files: `CLAUDE.md` (imports `docs/GAME_DESIGN.md`) and `.claude/agents/rules-auditor.md`.
 - Plugins: `frontend-design`, `commit-commands`, a TypeScript code-intelligence plugin; optional `code-review`.
@@ -155,6 +168,7 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 10-turn full re
 ---
 
 ## 8. Change log
+
 - 2026-10-16: Design-gap audit resolved. Safe start is now lazy relocation of the landed-on square's mine, to a free square on ranks 3-6 not next to a revealed square, first move only (the old "any first-move destination" wording was impossible). Numbers are live and persist until a reshuffle; starting squares start hidden; mine count, reshuffle countdown and lives are public. Explosion plus follow-ups = one turn; explosions count toward the counter; the reshuffle fires at the very end of a turn. Reshuffle clears craters, placement is uniform with no exclusions, rounding is half-up, and `mineDensity` (0.25) and `mineCap` (none) are tunable config. Special moves (3.5) confirmed. Castling-rook check exception applies but is unreachable. King death beats checkmate on the same move. No repetition, 50-move or insufficient-material draws; resign and draw offers in v1; no clocks; 60s disconnect grace. UI framework: Vite + React with DOM/CSS.
 - 2026-10-16: Flags are notes only. Exploded mines leave a public crater, safe to land on afterwards. Tech: pnpm monorepo, TypeScript, Node + `ws` on Fly.io. Tuning defaults added (tentative). Setup kit created.
 - 2026-10-16: Locked: reshuffle count = 25% of free squares; no zero flood-fill; stalemate is a draw; the follow-up move after an explosion can hit another mine.
