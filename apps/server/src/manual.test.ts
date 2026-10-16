@@ -356,9 +356,8 @@ describe("placement errors and privacy of draft traffic", () => {
     place(a, 16, 17, 18);
     a.send({ type: "unplace", sq: 17 });
     const last = await a.sync();
-    const snaps = last.filter((m) => m.type === "snapshot");
-    expect(snaps).toHaveLength(4);
-    expect(snaps.every((m) => m.type === "snapshot" && m.seq === 0)).toBe(true);
+    const seqs = last.flatMap((m) => (m.type === "snapshot" ? [m.seq] : []));
+    expect(seqs).toEqual([0, 0, 0, 0]);
     await b.sync();
     expect(b.frames.slice(bFrames).every((f) => f.includes('"pong"'))).toBe(true);
   });
