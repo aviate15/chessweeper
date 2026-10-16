@@ -1,0 +1,107 @@
+/* Style-tile page only. Colours come from the --px-* variables in theme.css. */
+.sprites-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  background: var(--px-teal);
+  color: var(--px-black);
+  font-family: "Silkscreen", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.sprites-page h1 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: var(--px-white);
+  text-shadow: 2px 2px 0 var(--px-black);
+}
+
+.sprites-section {
+  margin: 0 0 16px;
+  padding: 8px 12px 12px;
+  background: var(--px-silver);
+  box-shadow:
+    inset -1px -1px 0 var(--px-black),
+    inset 1px 1px 0 var(--px-white),
+    inset -2px -2px 0 var(--px-gray),
+    inset 2px 2px 0 var(--px-silver);
+}
+
+.sprites-section h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sprites-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-end;
+}
+
+.sprites-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.sprites-scales {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.sprites-caption {
+  font-size: 10px;
+  color: var(--px-dark-gray);
+}
+
+.sprites-grid {
+  display: grid;
+  gap: 0;
+  width: max-content;
+}
+
+.sprites-led {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--px-black);
+  width: max-content;
+}
+
+.sprites-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.sprites-swatch {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sprites-swatch i {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--px-black);
+}
+
+.sprites-button-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sprites-dialog-title {
+  position: absolute;
+  color: var(--px-white);
+  font-weight: 700;
+}

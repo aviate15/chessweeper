@@ -1,29 +1,32 @@
 import { expect, test } from "@playwright/test";
 
-test("play through handoffs, open Moves, resign and see the mines", async ({ page }) => {
+test("play, flip, use the Game menu, resign and see the mines; /sprites renders", async ({
+  page,
+}) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Chessweeper" })).toBeVisible();
   await expect(page.locator("[data-square]")).toHaveCount(64);
-
-  const play = async (from: string, to: string, next: "Black" | "White") => {
-    await page.locator(`[data-square="${from}"]`).click();
-    await page.locator(`[data-square="${to}"]`).click();
-    await expect(page.getByText(`Pass to ${next}`)).toBeVisible();
-    await page.getByRole("button", { name: "Ready" }).click();
-  };
+  // White at the bottom at the start.
+  await expect(page.locator("[data-square]").first()).toHaveAttribute("data-square", "a8");
 
   // Pawn moves first: a mine on the landing square is relocated by safe start (3.1).
-  await play("e2", "e4", "Black");
-  await play("e7", "e5", "White");
-  await play("d2", "d4", "Black");
+  await page.locator('[data-square="e2"]').click();
+  await page.locator('[data-square="e4"]').click();
+  await expect(page.getByText("Pass to Black")).toBeVisible();
+  await page.getByRole("button", { name: "Ready" }).click();
 
-  await page.getByRole("button", { name: "Moves" }).click();
-  const moves = page.getByRole("dialog", { name: "Moves" });
-  await expect(moves).toBeVisible();
-  await expect(moves.locator("li")).toHaveCount(3);
-  await moves.getByRole("button", { name: "Close" }).click();
+  // Black's back rank is now at the bottom: the board is flipped.
+  await expect(page.locator("[data-square]").first()).toHaveAttribute("data-square", "h1");
+  await expect(page.locator("[data-square]").last()).toHaveAttribute("data-square", "a8");
+  await expect(page.getByRole("region", { name: "Moves" }).locator("li")).toHaveCount(1);
 
-  await page.getByRole("button", { name: "Resign" }).click();
+  await page.getByRole("button", { name: "Game" }).click();
+  const sound = page.getByRole("menuitemcheckbox", { name: "Sound" });
+  await expect(sound).toHaveAttribute("aria-checked", "true");
+  await sound.click();
+  await expect(sound).toHaveAttribute("aria-checked", "false");
+  await page.getByRole("menuitem", { name: "Resign" }).click();
+
   const over = page.getByRole("dialog", { name: "Game over" });
   await expect(over).toBeVisible();
   await expect(over).toContainText("wins");
@@ -31,4 +34,8 @@ test("play through handoffs, open Moves, resign and see the mines", async ({ pag
   await expect(page.getByTestId("gameover-mines")).toContainText("Mines (");
   await over.getByRole("button", { name: "View board" }).click();
   expect(await page.locator("[data-mine]").count()).toBeGreaterThan(0);
+
+  await page.goto("/sprites");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.locator("[data-sprite]").first()).toBeVisible();
 });

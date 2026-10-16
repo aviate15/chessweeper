@@ -112,4 +112,28 @@ describe("useLocalGame", () => {
       reason: "resignation",
     });
   });
+
+  it("exposes the latest projected events and a turn id that moves with every change", () => {
+    const { result } = renderHook(() => useLocalGame({ rng: createSeededRng(5) }));
+    expect(result.current.lastEvents).toEqual([]);
+    const start = result.current.turnId;
+    const move = legalMovesFromView(result.current.view)[0];
+    if (!move) throw new Error("no move");
+    act(() => {
+      result.current.play(move);
+    });
+    expect(result.current.turnId).toBe(start + 1);
+    expect(result.current.lastEvents.some((e) => e.type === "MoveMade")).toBe(true);
+    act(() => {
+      result.current.dismissHandoff();
+      result.current.resign();
+    });
+    expect(result.current.turnId).toBe(start + 2);
+    expect(result.current.lastEvents.some((e) => e.type === "GameOver")).toBe(true);
+    act(() => {
+      result.current.newGame();
+    });
+    expect(result.current.turnId).toBe(start + 3);
+    expect(result.current.lastEvents).toEqual([]);
+  });
 });
