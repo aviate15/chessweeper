@@ -62,6 +62,45 @@ describe("rooms and seats", () => {
     await b.next("opponent", (m) => m.state === "connected");
   });
 
+  // 3.7: settings are chosen by the creator, clamped by the server, and public to both seats.
+  it("creates a room with the creator's settings and shows them to both seats", async () => {
+    const hh = await start();
+    const a = await hh.connect();
+    const ja = await a.create({ reshuffleInterval: 4, densityPercent: 35 });
+    expect(ja.settings).toEqual({ reshuffleInterval: 4, densityPercent: 35 });
+    expect((await a.next("snapshot")).view.settings).toEqual(ja.settings);
+    const b = await hh.connect();
+    const jb = await b.join(ja.code);
+    expect(jb.settings).toEqual(ja.settings);
+    expect((await b.next("snapshot")).view.settings).toEqual(ja.settings);
+  });
+
+  it("uses the default settings when the client sends none", async () => {
+    const hh = await start();
+    const a = await hh.connect();
+    const ja = await a.create();
+    expect(ja.settings).toEqual({ reshuffleInterval: 6, densityPercent: 30 });
+    expect((await a.next("snapshot")).view.turnsUntilReshuffle).toBe(6);
+  });
+
+  it("clamps out-of-range settings", async () => {
+    const hh = await start();
+    const a = await hh.connect();
+    const ja = await a.create({ reshuffleInterval: 500, densityPercent: -4 });
+    expect(ja.settings).toEqual({ reshuffleInterval: 20, densityPercent: 5 });
+    expect((await a.next("snapshot")).view.turnsUntilReshuffle).toBe(20);
+  });
+
+  it("ignores a malformed settings object like any bad frame", async () => {
+    const hh = await start();
+    const a = await hh.connect();
+    a.send({
+      type: "create_room",
+      settings: { reshuffleInterval: 4.5, densityPercent: 30 },
+    } as never);
+    expect((await a.next("error")).code).toBe("bad-message");
+  });
+
   it("rejects an unknown room, a wrong token and a third player", async () => {
     const hh = await start();
     const { ja } = await twoPlayers(hh);

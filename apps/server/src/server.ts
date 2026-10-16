@@ -3,7 +3,11 @@ import type { Duplex } from "node:stream";
 import type { AddressInfo } from "node:net";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import {
+  configFromSettings,
   createGame,
+  DEFAULT_SETTINGS,
+  settingsFromConfig,
+  type GameSettings,
   legalMoves,
   projectEvents,
   toGameOverView,
@@ -229,7 +233,13 @@ export function createServer(options: ServerOptions): RunningServer {
     conn.room = room;
     conn.seat = color;
 
-    send(conn, { type: "joined", code: room.code, seat: color, token: seat.token });
+    send(conn, {
+      type: "joined",
+      code: room.code,
+      seat: color,
+      token: seat.token,
+      settings: settingsFromConfig(room.state.config),
+    });
     send(conn, { type: "snapshot", seq: room.seq, view: toPublicView(room.state, color) });
     const over = toGameOverView(room.state, color);
     if (over !== null) send(conn, { type: "game_over", over });
@@ -269,7 +279,7 @@ export function createServer(options: ServerOptions): RunningServer {
 
   // ---- message handlers ----
 
-  function handleCreate(conn: Conn): void {
+  function handleCreate(conn: Conn, settings: GameSettings): void {
     if (conn.room !== null) {
       sendError(conn, "forbidden");
       return;
@@ -283,7 +293,7 @@ export function createServer(options: ServerOptions): RunningServer {
     const room: Room = {
       code,
       ownerIp: conn.ip,
-      state: createGame({ rng }),
+      state: createGame({ rng, config: configFromSettings(settings) }),
       seq: 0,
       seats: {
         w: { token: newSeatToken(), conn: null, claimable: false, graceTimer: undefined },
@@ -421,7 +431,7 @@ export function createServer(options: ServerOptions): RunningServer {
         return;
       }
       case "create_room": {
-        handleCreate(conn);
+        handleCreate(conn, msg.settings ?? DEFAULT_SETTINGS);
         return;
       }
       case "join_room": {

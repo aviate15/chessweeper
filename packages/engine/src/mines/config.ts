@@ -10,10 +10,13 @@ export interface GameConfig {
 }
 
 /** Turns without a capture before a reshuffle (3.7). The single named default; tunable. */
-export const DEFAULT_RESHUFFLE_INTERVAL = 8;
+export const DEFAULT_RESHUFFLE_INTERVAL = 6;
+
+/** Mines as a fraction of free squares (3.1, 3.7). The single named default; tunable. */
+export const DEFAULT_MINE_DENSITY = 0.3;
 
 export const DEFAULT_CONFIG: GameConfig = {
-  mineDensity: 0.25,
+  mineDensity: DEFAULT_MINE_DENSITY,
   mineCap: null,
   kingLives: 3,
   reshuffleInterval: DEFAULT_RESHUFFLE_INTERVAL,
@@ -21,7 +24,7 @@ export const DEFAULT_CONFIG: GameConfig = {
 
 /**
  * Mines for a given number of free squares: density × free, rounded half-up, then capped
- * (design doc 3.7). At the start, 25% of the 32 squares on ranks 3-6 gives 8 (3.1).
+ * (design doc 3.7). At the start, 30% of the 32 squares on ranks 3-6 gives 10 (3.1).
  */
 export function mineCountFor(freeSquares: number, config: GameConfig): number {
   const count = Math.floor(config.mineDensity * freeSquares + 0.5);

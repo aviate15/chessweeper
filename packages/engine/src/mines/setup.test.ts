@@ -4,18 +4,29 @@ import { DEFAULT_CONFIG } from "./config";
 import { createSeededRng } from "./rng";
 import { gameFromScenario } from "./scenario";
 import { createGame } from "./setup";
+import { maxMinesIn3x3 } from "./test-utils";
 
 describe("createGame", () => {
-  // 3.1: about 8 mines (25% of the 32 squares on ranks 3-6), ranks 3-6 only.
-  it("places 8 mines on ranks 3-6, never under a piece", () => {
+  // 3.1: about 10 mines (30% of the 32 squares on ranks 3-6), ranks 3-6 only; the 3x3
+  // limit can leave the odd game one or two short.
+  it("places about 10 mines on ranks 3-6, never under a piece", () => {
     for (let seed = 0; seed < 200; seed++) {
       const game = createGame({ rng: createSeededRng(seed) });
-      expect(game.hidden.mines.size).toBe(8);
+      expect(game.hidden.mines.size).toBeLessThanOrEqual(10);
+      expect(game.hidden.mines.size).toBeGreaterThanOrEqual(8);
       for (const mine of game.hidden.mines) {
         expect(rankOf(mine)).toBeGreaterThanOrEqual(2);
         expect(rankOf(mine)).toBeLessThanOrEqual(5);
         expect(game.position.board[mine]).toBeNull();
       }
+    }
+  });
+
+  // 3.1: at most 2 mines in any 3x3 area.
+  it("never puts more than 2 mines in a 3x3 area", () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const game = createGame({ rng: createSeededRng(seed) });
+      expect(maxMinesIn3x3(game.hidden.mines)).toBeLessThanOrEqual(2);
     }
   });
 

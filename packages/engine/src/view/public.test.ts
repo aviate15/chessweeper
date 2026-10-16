@@ -1,6 +1,7 @@
 // Hidden-information boundary (design doc 3.1, 3.2, 3.4, 3.5, 3.7).
 import { describe, expect, it } from "vitest";
 import { START_FEN } from "../chess/fen";
+import { DEFAULT_CONFIG } from "../mines/config";
 import type { GameEvent } from "../mines/events";
 import type { Working } from "../mines/landing";
 import { relocateSafeStartMine } from "../mines/safestart";
@@ -25,6 +26,7 @@ const TOP_LEVEL_KEYS = [
   "log",
   "mineCount",
   "revealed",
+  "settings",
   "status",
   "turn",
   "turnsUntilReshuffle",
@@ -119,7 +121,7 @@ describe("toPublicView", () => {
   // 3.7: public countdown to the next reshuffle.
   it("reports turns until the reshuffle", () => {
     const game = gameFromScenario({ fen: START_FEN, noCaptureCount: 2 });
-    expect(toPublicView(game, null).turnsUntilReshuffle).toBe(6);
+    expect(toPublicView(game, null).turnsUntilReshuffle).toBe(4);
   });
 
   // 3.7, 3.4: a check-exception chain is one turn, so the countdown stays frozen until it ends.
@@ -129,13 +131,13 @@ describe("toPublicView", () => {
       mines: ["e4"],
       noCaptureCount: 2,
     });
-    expect(toPublicView(game, null).turnsUntilReshuffle).toBe(6);
+    expect(toPublicView(game, null).turnsUntilReshuffle).toBe(4);
     const chain = play(game, "a8e4").state;
     expect(chain.public.checkException).toBe("b");
-    expect(toPublicView(chain, null).turnsUntilReshuffle).toBe(6);
+    expect(toPublicView(chain, null).turnsUntilReshuffle).toBe(4);
     const done = play(chain, "e8d8").state;
     expect(done.public.checkException).toBeNull();
-    expect(toPublicView(done, null).turnsUntilReshuffle).toBe(5);
+    expect(toPublicView(done, null).turnsUntilReshuffle).toBe(3);
   });
 
   it("reports the viewer, turn and check", () => {
@@ -234,5 +236,16 @@ describe("log in the view", () => {
     const view: PublicView = toPublicView(play(game, "e2e4").state, null);
     expect(JSON.stringify(view.log)).not.toContain("MineRelocated");
     expect(view.log).toHaveLength(1);
+  });
+});
+
+// 3.7: the game's settings are public information.
+describe("toPublicView settings", () => {
+  it("reports the interval and density the game runs with", () => {
+    const game = gameFromScenario({
+      fen: START_FEN,
+      config: { ...DEFAULT_CONFIG, reshuffleInterval: 3, mineDensity: 0.4 },
+    });
+    expect(toPublicView(game, null).settings).toEqual({ reshuffleInterval: 3, densityPercent: 40 });
   });
 });

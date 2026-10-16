@@ -2,7 +2,8 @@ import { parseFen, START_FEN } from "../chess/fen";
 import { rankOf } from "../chess/square";
 import type { Square } from "../chess/types";
 import { DEFAULT_CONFIG, mineCountFor, type GameConfig } from "./config";
-import { pickDistinct, type Rng } from "./rng";
+import type { Rng } from "./rng";
+import { placeSpread } from "./spread";
 import type { GameState } from "./state";
 
 /** Ranks 3-6 (0-based rank indices 2-5) hold the starting mines (design doc 3.1). */
@@ -27,7 +28,7 @@ export function createGame({ rng, config = DEFAULT_CONFIG }: CreateGameOptions):
       candidates.push(square);
     }
   });
-  const mines = pickDistinct(rng, candidates, mineCountFor(candidates.length, config));
+  const mines = placeSpread(rng, candidates, mineCountFor(candidates.length, config));
 
   return {
     position,
