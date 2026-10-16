@@ -11,3 +11,5 @@ export { applyMove } from "./chess/apply";
 export { legalMoves } from "./chess/movegen";
 export * from "./chess/status";
 export { perft, perftDivide } from "./chess/perft";
+export * from "./mines/rng";
+export * from "./mines/config";
