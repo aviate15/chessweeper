@@ -5,6 +5,8 @@ import {
   type GameOverReason,
   type GameResult,
   type PieceType,
+  type PublicView,
+  type Square,
 } from "@chessweeper/engine";
 
 export const COLOR_NAME: Record<Color, string> = { w: "White", b: "Black" };
@@ -83,4 +85,77 @@ export function narrate(events: readonly EventView[]): string {
     }
   }
   return parts.join(". ");
+}
+
+export interface RevealSource {
+  readonly color: Color;
+  readonly piece: PieceType;
+}
+
+/** Rook destination of a castling move: f/d file on the mover's back rank. */
+function castleRookSquare(color: Color, side: "king" | "queen"): Square {
+  const base = color === "w" ? 0 : 56;
+  return base + (side === "king" ? 5 : 3);
+}
+
+/**
+ * Which piece landed on `square` to reveal its current number, from the public log only. Walks
+ * back to the last reshuffle (a reshuffle re-hides every number, so older reveals are gone) and
+ * returns null when the reveal is unknown.
+ */
+export function revealSource(view: PublicView, square: Square): RevealSource | null {
+  for (let i = view.log.length - 1; i >= 0; i--) {
+    const entry = view.log[i];
+    if (!entry) continue;
+    for (let j = entry.events.length - 1; j >= 0; j--) {
+      const e = entry.events[j];
+      if (e?.type === "Reshuffled") return null;
+      if (e?.type !== "NumberRevealed" || e.square !== square) continue;
+      for (let k = entry.events.length - 1; k >= 0; k--) {
+        const m = entry.events[k];
+        if (m?.type !== "MoveMade") continue;
+        const move = m.move;
+        if (move.castle !== null && castleRookSquare(m.color, move.castle) === square) {
+          return { color: m.color, piece: "r" };
+        }
+        if (move.to === square) {
+          return { color: m.color, piece: move.promotion ?? move.piece };
+        }
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
+/** Tooltip / status text for a revealed number or a crater; null for a hidden square. */
+export function numberDescription(
+  number: number | null,
+  crater: boolean,
+  source: RevealSource | null,
+): string | null {
+  if (number === null && !crater) return null;
+  const parts: string[] = [];
+  if (crater) parts.push("A mine blew up here and left a crater.");
+  if (number !== null) {
+    parts.push(
+      number === 0
+        ? "No mines among the 8 neighbouring squares."
+        : `${String(number)} ${number === 1 ? "mine" : "mines"} among the 8 neighbouring squares.`,
+    );
+    if (source) {
+      parts.push(
+        `Revealed when ${COLOR_NAME[source.color]}'s ${PIECE_NAME[source.piece]} landed here.`,
+      );
+    }
+  }
+  return parts.join(" ");
+}
+
+/** Tooltip text for one square of the public view, or null when nothing is revealed there. */
+export function describeSquare(view: PublicView, square: Square): string | null {
+  const number = view.revealed.find((r) => r.square === square)?.number ?? null;
+  const crater = view.craters.includes(square);
+  if (number === null && !crater) return null;
+  return numberDescription(number, crater, number === null ? null : revealSource(view, square));
 }

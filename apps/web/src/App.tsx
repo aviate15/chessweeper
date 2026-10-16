@@ -29,6 +29,7 @@ import { MoveLog } from "./components/MoveLog";
 import { Px, spriteUrl } from "./components/Px";
 import { PromotionPicker } from "./components/PromotionPicker";
 import { StatusBar } from "./components/StatusBar";
+import { describeSquare } from "./narration";
 import { canOffer } from "./drawOffers";
 import {
   fxEndMs,
@@ -72,6 +73,8 @@ export interface AppProps {
 
 export function App({ rng, gate = true }: AppProps) {
   const [options, setOptions] = useState<GameOptions>(loadOptions);
+  /** Number hint shown in the status bar after focusing or tapping a revealed square. */
+  const [hint, setHint] = useState<string | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(() => !loadRulesHidden());
   const config = useMemo(() => configFromOptions(options), [options]);
@@ -191,7 +194,17 @@ export function App({ rng, gate = true }: AppProps) {
     game.toggleFlag(square);
   };
 
+  const showHint = (square: Square) => {
+    setHint(describeSquare(view, square));
+  };
+
+  // Any new turn or game replaces the hint with the usual narration.
+  useEffect(() => {
+    setHint(null);
+  }, [turnId]);
+
   const onSquareClick = (square: Square) => {
+    showHint(square);
     if (over || gated) return;
     if (flagMode) {
       flagSquare(square);
@@ -322,13 +335,14 @@ export function App({ rng, gate = true }: AppProps) {
             fx={activeFx}
             fxKey={turnId * 2 + (phase === "post" ? 1 : 0)}
             onSquareClick={onSquareClick}
+            onSquareFocus={showHint}
             onSquareFlag={(sq) => {
               if (!over && !gated) flagSquare(sq);
             }}
           />
           <MoveLog view={view} logRef={logRef} />
         </div>
-        <StatusBar view={view} />
+        <StatusBar view={view} hint={hint} />
         {promotion !== null && (
           <PromotionPicker
             color={view.turn}

@@ -52,6 +52,9 @@ export interface SquareProps {
   fx: SquareFx | undefined;
   /** Changes every turn so effect layers restart their CSS animation. */
   fxKey: number;
+  /** Tooltip text for a revealed number or crater (also read by screen readers). */
+  description?: string | null;
+  onFocus?: (square: Sq) => void;
   onClick: (square: Sq) => void;
   onContextMenu: (square: Sq) => void;
 }
@@ -96,6 +99,11 @@ export function Square(props: SquareProps) {
       data-mine={props.mine || undefined}
       data-destination={props.destination || undefined}
       aria-label={name}
+      aria-describedby={props.description ? `sq-desc-${name}` : undefined}
+      title={props.description ?? undefined}
+      onFocus={() => {
+        props.onFocus?.(square);
+      }}
       onClick={() => {
         props.onClick(square);
       }}
@@ -104,6 +112,11 @@ export function Square(props: SquareProps) {
         props.onContextMenu(square);
       }}
     >
+      {props.description && (
+        <span id={`sq-desc-${name}`} className="sr-only">
+          {props.description}
+        </span>
+      )}
       <Px sprite={tile} className="layer" />
       {props.lastMove && <Px sprite={OVERLAY_LAST_MOVE} className="layer" />}
       {props.selected && <Px sprite={OVERLAY_SELECTED} className="layer" />}

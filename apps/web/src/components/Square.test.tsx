@@ -43,3 +43,20 @@ describe("Square number badge", () => {
     ).toBeNull();
   });
 });
+
+describe("Square description", () => {
+  it("exposes the tooltip text as title and accessible description", () => {
+    const text =
+      "2 mines among the 8 neighbouring squares. Revealed when White's knight landed here.";
+    const { container } = render(<Square {...base} description={text} />);
+    const button = container.querySelector("button");
+    expect(button).toHaveAttribute("title", text);
+    const id = button?.getAttribute("aria-describedby") ?? "";
+    expect(container.querySelector(`#${id}`)).toHaveTextContent(text);
+  });
+
+  it("has no tooltip when nothing is revealed", () => {
+    const { container } = render(<Square {...base} number={null} description={null} />);
+    expect(container.querySelector("button")).not.toHaveAttribute("title");
+  });
+});

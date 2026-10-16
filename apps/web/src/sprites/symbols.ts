@@ -154,6 +154,9 @@ export const BADGE_SPRITES: readonly Sprite[] = BADGE_GLYPHS.map((glyph, i) =>
   ),
 );
 
+/** Just the badge box (7x9) with a "3", for the legend under the move log. */
+export const BADGE_LEGEND: Sprite = (BADGE_SPRITES[2] ?? []).slice(7).map((row) => row.slice(9));
+
 export const FLAG: Sprite = [
   "................",
   "................",

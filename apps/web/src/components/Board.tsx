@@ -7,6 +7,7 @@ import {
   type PublicView,
   type Square as Sq,
 } from "@chessweeper/engine";
+import { numberDescription, revealSource } from "../narration";
 import type { Fx } from "../presentation";
 import { Square, type SquareFx } from "./Square";
 
@@ -27,6 +28,8 @@ export interface BoardProps {
   fxKey: number;
   onSquareClick: (square: Sq) => void;
   onSquareFlag: (square: Sq) => void;
+  /** A square gained focus (keyboard or pointer); used to show number hints. */
+  onSquareFocus?: (square: Sq) => void;
 }
 
 /** Square of a colour's king, or null (never null in a real game). */
@@ -106,6 +109,7 @@ export function Board({
   fxKey,
   onSquareClick,
   onSquareFlag,
+  onSquareFocus,
 }: BoardProps) {
   const last = view.log[view.log.length - 1];
   const moved = last?.events.find((e) => e.type === "MoveMade");
@@ -157,6 +161,12 @@ export function Board({
               mine={mineOrder.has(sq)}
               fx={sqFx}
               fxKey={fxKey}
+              description={numberDescription(
+                numbers.get(sq) ?? null,
+                view.craters.includes(sq),
+                numbers.has(sq) ? revealSource(view, sq) : null,
+              )}
+              {...(onSquareFocus ? { onFocus: onSquareFocus } : {})}
               onClick={onSquareClick}
               onContextMenu={onSquareFlag}
             />
