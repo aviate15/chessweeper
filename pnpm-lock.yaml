@@ -212,6 +212,9 @@ importers:
       '@chessweeper/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@fontsource/silkscreen':
+        specifier: ^5.3.0
+        version: 5.3.0
       react:
         specifier: ^19.1.0
         version: 19.3.1
@@ -536,6 +539,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource/silkscreen@5.3.0':
+    resolution: {integrity: sha512-M1NQ3LQH0LFNvyFPd/piHEGMImPPtpLglNnLC6Vdcq9kL0jNIOtTQmksAWCc4enbDnw1OnIpZtjNEfRqYm/QmA==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -1754,6 +1760,8 @@ snapshots:
       levn: 0.4.1
 
   '@exodus/bytes@1.16.0': {}
+
+  '@fontsource/silkscreen@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
