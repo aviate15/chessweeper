@@ -143,6 +143,48 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` The settings are **public**. Both players see them in the waiting room, in the status bar and in the Rules page text, so nobody is surprised.
 - `[D]` Local pass-and-play chooses them in Game → New game... (section 6). They apply to the new game only, never to a running one.
 
+### 3.10 Manual mine mode (2026-10-17)
+
+A second game mode. **Auto mine** is everything above, unchanged. In **Manual mine** the players place the mines for each other. Every rule above applies unless this section overrides it. `[T]` marks rules derived from existing ones and awaiting Aviate's confirmation.
+
+**Mode and settings**
+
+- `[D]` The mode is a per-game setting (3.9), chosen with the interval and density: Create game online, New game... locally. The server validates it; a missing or unknown mode means Auto.
+- `[D]` Manual mode keeps the interval and density settings. Its default interval is **10** turns (`DEFAULT_MANUAL_RESHUFFLE_INTERVAL`); density default stays 30%.
+- `[T]` Each player's **quota** is the free (unoccupied) squares at that moment x `mineDensity` / 2, rounded half-up, with `mineCap` (if set) halved first. At game start that is 5 each (10 total, same as Auto).
+
+**Placement**
+
+- `[D]` A **placement round** happens at game start and after every reshuffle. A reshuffle first clears all live mines, craters, revealed numbers and flags (3.7), then both players place anew. No moves are allowed during placement.
+- `[D]` Each player places up to their quota, at most one mine per square, on any empty (unoccupied) square. At game start that means ranks 3-6 only. There is **no spread limit**.
+- `[D]` If both players place on the same square it becomes a hidden **big mine**.
+- `[T]` Until a player presses Done they may add and remove their own placements. A player who presses Done, or whose time runs out, with fewer than their quota placed gets the rest placed at random.
+- `[D]` Online, both place secretly and simultaneously with a **20-second** timer. The round ends early when both have pressed Done. On timeout the server places the missing mines at random on legal squares. That player is told how many were placed at random, not where; the opponent is told nothing.
+- `[D]` The opponent sees only "placing" and then "ready" (no count, no squares).
+- `[D]` A disconnect during placement does not stop the timer. The server keeps the drafts, and a reconnecting player gets their own back. The 60-second grace (3.6) applies once play starts.
+- `[D]` Locally, White places, a handoff screen hides the board, then Black places. `[T]` Local placement has no timer. White places first in every round; after placement the handoff goes to the side to move.
+- `[T]` Resigning and draw offers are allowed during placement. Resigning ends the game at once.
+- `[D]` Once a round ends, a player's own placements are hidden from them too (the memory skill). Nothing about who placed what is ever public until the game ends.
+- `[D]` **No safe start** in Manual mode: both sides place blind, so the first move is equally risky for both.
+
+**Information**
+
+- `[D]` A revealed number counts all adjacent mines, both players', and a big mine counts as **2**. Players can subtract their own mines to deduce the opponent's.
+- `[T]` The live mine count counts mines, not squares (a big mine is 2). After placement it always equals 2 x quota, so it never hints at stacks.
+- `[T]` A single mine's explosion never shows whose it was.
+- `[T]` At game over the final layout also shows who placed each mine and which are big. This is sent only after the game is over.
+
+**Landing on mines**
+
+- `[D]` A single mine behaves as in 3.4 (a king loses a life, any other piece is destroyed, the mine becomes a crater), whoever placed it. Players can hit their own mines.
+- `[D]` A big mine is not consumed by the piece alone: any landing on it **blasts the 3x3 area** around it (clipped at the board edge). The blast destroys every non-king piece in the area, both sides' and the mover's included. Every king in the area loses exactly **1** life and stays on its square. Every square in the area becomes a crater and every mine in the area is consumed. There is **no chain reaction**.
+- `[D]` If the blast takes the last life of both kings, the **mover loses** (3.6 precedence).
+- `[T]` Only a king that lands on the big mine and survives reveals that square (3.2). Pieces and kings merely caught in the area reveal nothing.
+- `[T]` After a blast, the check exception (3.4) applies if the mover's piece was destroyed and the mover's own king is in check. Otherwise check, checkmate and stalemate are evaluated for the opponent on the board left by the blast. If the blast leaves the *opponent* in check, that is ordinary check.
+- `[T]` Blast kills are not captures: the no-capture counter is not reset (3.7). A turn with a blast counts as a normal turn.
+- `[T]` Castling lands the king first. If the king's blast destroys the castling rook, the rook move does not happen. A rook landing on a big mine blasts like any piece.
+- `[T]` En passant: the captured pawn is removed first, then the capturer's landing resolves, blast included.
+
 ---
 
 ## 4. Open questions (priority order)
@@ -203,6 +245,7 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 8-turn full res
 
 ## 8. Change log
 
+- 2026-10-17: Manual mine mode added as section 3.10 (moved from docs/IDEAS.md): secret placement rounds at start and after each reshuffle, stacked big mines blasting 3x3, 20 s online timer with random fill on timeout, interval default 10. Decisions by Aviate: no chain reaction, 1 life per king, mover loses if both kings die, no spread limit, opponent sees only placing/ready, timer runs on through a disconnect.
 - 2026-10-17: Playtest 3. Reshuffle interval default is now 6 and mine density default 30% (10 starting mines), chosen with a seeded simulation of the real engine (`pnpm --filter @chessweeper/engine sim`): at most 2 mines in any 3x3 area, for the start and for reshuffles, not for safe-start relocation (3.1, 3.7). Interval and density are chosen per game (3.9): Create game online, New game... locally; the server clamps them; both players see them in the waiting room, status bar and Rules page. Game → Options removed (section 6).
 - 2026-10-16: `pnpm play` falls back across tunnel services (cloudflared, Pinggy, localhost.run, ngrok) because some networks block Cloudflare's port. Hosting only, no rule changes.
 
