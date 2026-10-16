@@ -9,3 +9,4 @@ export * from "./chess/attacks";
 export * from "./chess/move";
 export { applyMove } from "./chess/apply";
 export { legalMoves } from "./chess/movegen";
+export * from "./chess/status";
