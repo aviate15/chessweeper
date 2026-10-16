@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Pure engine: no DOM and no Node types, so browser and Node globals fail to compile.
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src"]
+}
