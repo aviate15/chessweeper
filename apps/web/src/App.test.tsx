@@ -23,7 +23,7 @@ describe("App", () => {
       "wk",
     );
     expect(screen.getByTestId("mine-count")).toHaveTextContent("8");
-    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("10");
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("6");
     expect(screen.getByTestId("lives-w")).toHaveTextContent("3");
     expect(screen.getByTestId("lives-b")).toHaveTextContent("3");
     // No mine marker and no number before anything is revealed.

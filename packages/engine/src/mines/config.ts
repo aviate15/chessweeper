@@ -13,7 +13,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   mineDensity: 0.25,
   mineCap: null,
   kingLives: 3,
-  reshuffleInterval: 10,
+  reshuffleInterval: 6,
 };
 
 /**

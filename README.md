@@ -1,6 +1,6 @@
 # Chessweeper
 
-Chess meets Minesweeper. Mines hide on the board, landing on a square reveals how many mines surround it, and pieces that step on a mine blow up. Kings have three lives. Numbers are public, flags are private, and every 10 turns without a capture the mines reshuffle. Online and local pass-and-play, in an old-school Windows Minesweeper look.
+Chess meets Minesweeper. Mines hide on the board, landing on a square reveals how many mines surround it, and pieces that step on a mine blow up. Kings have three lives. Numbers are public, flags are private, and every 6 turns without a capture the mines reshuffle. Online and local pass-and-play, in an old-school Windows Minesweeper look.
 
 Status: early development. Rules live in [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md).
 
