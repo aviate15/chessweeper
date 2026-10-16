@@ -1,4 +1,7 @@
 /**
- * Wire protocol shared by server and web client. Placeholder until the protocol milestone.
+ * Wire protocol shared by the server and the web client: strict zod schemas for client
+ * messages, TypeScript types and a strict schema for server messages, fixed error codes.
  */
-export const PACKAGE_NAME = "@chessweeper/protocol";
+export * from "./client";
+export * from "./errors";
+export * from "./server";
