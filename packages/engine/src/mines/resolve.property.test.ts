@@ -107,9 +107,9 @@ interface Tally {
 
 /** Plays up to `choices.length` random moves, checking the invariants after each. */
 function playRandomly(start: GameState, choices: readonly number[], tally: Tally): void {
-  const initialMines = start.hidden.mines.size + start.public.craters.size;
+  let expectedMines = start.hidden.mines.size + start.public.craters.size;
   let state = start;
-  checkInvariants(state, initialMines);
+  checkInvariants(state, expectedMines);
 
   for (const choice of choices) {
     if (state.public.status.kind === "over") break;
@@ -122,6 +122,10 @@ function playRandomly(start: GameState, choices: readonly number[], tally: Tally
     const result = resolveMove(state, move, createSeededRng(1));
     expect(snapshot(state)).toBe(before); // inputs are never mutated
     state = result.state;
+    // A reshuffle starts a fresh mine population (3.7); the formula is checked in commit 5.
+    if (result.events.some((e) => e.type === "Reshuffled")) {
+      expectedMines = state.hidden.mines.size + state.public.craters.size;
+    }
 
     for (const event of result.events) {
       if (event.type === "PieceDestroyed") tally.explosions += 1;
@@ -132,7 +136,7 @@ function playRandomly(start: GameState, choices: readonly number[], tally: Tally
     }
     // A whole check-exception chain is one turn: the fullmove number advances at most once.
     expect(state.position.fullmoveNumber - fullmoveBefore).toBeLessThanOrEqual(1);
-    checkInvariants(state, initialMines);
+    checkInvariants(state, expectedMines);
   }
 }
 

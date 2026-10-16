@@ -4,8 +4,10 @@ import { legalMoves } from "../chess/movegen";
 import type { Piece } from "../chess/types";
 import type { Rng } from "./rng";
 import type { GameEvent } from "./events";
+import { nextNoCaptureCount } from "./counter";
 import { finishTurn } from "./endturn";
 import { resolveLanding, type Working } from "./landing";
+import { reshuffle } from "./reshuffle";
 import type { GameState } from "./state";
 
 /** The move is not a legal chess move in the current position. */
@@ -38,7 +40,6 @@ export interface Resolution {
  * - captures never hit mines (3.5).
  * Immutable: returns a new state and the events, leaving the input untouched.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- used from the next commit
 export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution {
   if (state.public.status.kind === "over") throw new GameOverError();
   const legal = legalMoves(state.position).find(
@@ -83,6 +84,17 @@ export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution 
   }
 
   const end = finishTurn({ before: state.position, moved, work, move: legal, mover, destroyed });
+  // 3.7, 3.8 step 8: only a completed turn in a game that goes on counts. A pending chain
+  // and the game-ending turn leave the counter alone, and neither can trigger a reshuffle.
+  let noCaptureCount = state.public.noCaptureCount;
+  if (end.status.kind === "ongoing" && end.checkException === null) {
+    noCaptureCount = nextNoCaptureCount(noCaptureCount, legal.captured !== null);
+    if (noCaptureCount >= state.config.reshuffleInterval) {
+      reshuffle(work, end.position.board, state.config, rng);
+      noCaptureCount = 0;
+    }
+  }
+
   return {
     state: {
       ...state,
@@ -94,6 +106,7 @@ export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution 
         lives: { w: work.lives.w, b: work.lives.b },
         status: end.status,
         checkException: end.checkException,
+        noCaptureCount,
       },
       hidden: { ...state.hidden, mines: work.mines },
     },
