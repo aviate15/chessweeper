@@ -125,7 +125,7 @@ function blast(work: Working, square: Square, piece: Piece): LandingOutcome {
 
   let outcome: LandingOutcome = "survived";
   for (const target of area) {
-    const victim = work.board[target];
+    const victim = target === square ? piece : work.board[target]; // the original piece, so a pawn on a promotion square dies as a pawn (3.5)
     if (victim == null) continue;
     if (victim.type === "k") {
       const livesLeft = work.lives[victim.color] - 1;
