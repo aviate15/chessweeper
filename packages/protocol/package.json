@@ -9,5 +9,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@chessweeper/engine": "workspace:*",
+    "zod": "^4.0.0"
   }
 }

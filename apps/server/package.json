@@ -8,6 +8,15 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "start": "node --experimental-strip-types src/main.ts"
+  },
+  "dependencies": {
+    "@chessweeper/engine": "workspace:*",
+    "@chessweeper/protocol": "workspace:*",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.0"
   }
 }
