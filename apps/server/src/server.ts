@@ -80,6 +80,8 @@ interface Room {
   /** An offerer may not offer again until they have made a move. */
   readonly mustMove: { w: boolean; b: boolean };
   expiry: unknown;
+  /** The game is over and the short removal timer is running. */
+  finishing: boolean;
 }
 
 const other = (c: Color): Color => (c === "w" ? "b" : "w");
@@ -127,13 +129,16 @@ export function createServer(options: ServerOptions): RunningServer {
   // ---- room lifetime ----
 
   function scheduleExpiry(room: Room): void {
+    // Once the game is over the removal time is fixed: later activity must not extend it.
+    if (room.finishing) return;
     if (room.expiry !== undefined) clock.clearTimeout(room.expiry);
     const anyone = connOf(room, "w") !== null || connOf(room, "b") !== null;
+    const over = room.state.public.status.kind === "over";
     room.expiry = clock.setTimeout(
       () => {
         closeRoom(room);
       },
-      anyone ? limits.idleRoomMs : limits.emptyRoomMs,
+      over ? limits.finishedRoomMs : anyone ? limits.idleRoomMs : limits.emptyRoomMs,
     );
   }
 
@@ -152,7 +157,9 @@ export function createServer(options: ServerOptions): RunningServer {
       }
     }
     rooms.delete(room.code);
-    roomsPerIp.set(room.ownerIp, Math.max(0, (roomsPerIp.get(room.ownerIp) ?? 1) - 1));
+    const remaining = (roomsPerIp.get(room.ownerIp) ?? 1) - 1;
+    if (remaining <= 0) roomsPerIp.delete(room.ownerIp);
+    else roomsPerIp.set(room.ownerIp, remaining);
     logger.info("room_closed");
   }
 
@@ -173,6 +180,11 @@ export function createServer(options: ServerOptions): RunningServer {
         if (seat !== null) clock.clearTimeout(seat.graceTimer);
         const over = toGameOverView(room.state, color);
         if (over !== null) toSeat(room, color, { type: "game_over", over });
+      }
+      // Free the room shortly after the game ends, once both have had time to load the result.
+      if (!room.finishing) {
+        scheduleExpiry(room);
+        room.finishing = true;
       }
     }
   }
@@ -277,10 +289,11 @@ export function createServer(options: ServerOptions): RunningServer {
       drawOffer: null,
       mustMove: { w: false, b: false },
       expiry: undefined,
+      finishing: false,
     };
     rooms.set(code, room);
     roomsPerIp.set(conn.ip, (roomsPerIp.get(conn.ip) ?? 0) + 1);
-    logger.info("room_created", { ip: conn.ip });
+    logger.info("room_created");
     attach(room, "w", conn, false);
   }
 
@@ -299,7 +312,7 @@ export function createServer(options: ServerOptions): RunningServer {
       for (const color of ["w", "b"] as const) {
         const seat = room.seats[color];
         if (seat !== null && tokensEqual(seat.token, token)) {
-          logger.info("seat_reconnected", { ip: conn.ip });
+          logger.info("seat_reconnected");
           attach(room, color, conn, true);
           return;
         }
@@ -312,7 +325,7 @@ export function createServer(options: ServerOptions): RunningServer {
       return;
     }
     room.seats.b = { token: newSeatToken(), conn: null, claimable: false, graceTimer: undefined };
-    logger.info("room_joined", { ip: conn.ip });
+    logger.info("room_joined");
     attach(room, "b", conn, false);
   }
 
@@ -485,9 +498,13 @@ export function createServer(options: ServerOptions): RunningServer {
   const wss = new WebSocketServer({ noServer: true, maxPayload: limits.maxPayloadBytes });
 
   const http = createHttpServer((req, res) => {
-    const ok = req.url === "/healthz";
-    res.writeHead(ok ? 200 : 404, { "Content-Type": "text/plain", "Content-Length": ok ? 2 : 0 });
-    res.end(ok ? "ok" : "");
+    const ok = req.url === "/healthz" && (req.method === "GET" || req.method === "HEAD");
+    res.writeHead(ok ? 200 : 404, {
+      "Content-Type": "text/plain",
+      "Content-Length": ok ? 2 : 0,
+      "Cache-Control": "no-store",
+    });
+    res.end(ok && req.method === "GET" ? "ok" : "");
   });
 
   function reject(socket: Duplex, status: string): void {

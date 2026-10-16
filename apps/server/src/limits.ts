@@ -13,18 +13,21 @@ export interface Limits {
   readonly emptyRoomMs: number;
   /** A room with no activity at all is dropped after this long (30 min). */
   readonly idleRoomMs: number;
+  /** A room whose game is over is dropped this long after it ended, so both can load the result. */
+  readonly finishedRoomMs: number;
 }
 
 export const DEFAULT_LIMITS: Limits = {
   maxPayloadBytes: 2048,
-  maxConnectionsPerIp: 8,
-  maxRoomsPerIp: 4,
+  maxConnectionsPerIp: 100,
+  maxRoomsPerIp: 30,
   maxRooms: 1000,
   messageBurst: 20,
   messagesPerSecond: 5,
   graceMs: 60_000,
   emptyRoomMs: 5 * 60_000,
   idleRoomMs: 30 * 60_000,
+  finishedRoomMs: 2 * 60_000,
 };
 
 export class TokenBucket {

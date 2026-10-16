@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "dev": "NODE_ENV=development tsx src/main.ts",
-    "start": "node --experimental-strip-types src/main.ts"
+    "start": "node dist/main.js",
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node24 --external:bufferutil --external:utf-8-validate \"--banner:js=import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=dist/main.js",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "@chessweeper/engine": "workspace:*",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@types/ws": "^8.5.0",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "esbuild": "^0.28.2"
   }
 }

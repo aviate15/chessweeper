@@ -5,8 +5,8 @@ export interface Logger {
   info(event: string, fields?: LogFields): void;
 }
 
-/** Field names whose values are secrets or capabilities (seat tokens, invite codes). */
-const SECRET_KEY = /token|code|secret|authorization|cookie/i;
+/** Field names whose values are secrets or capabilities (seat tokens, invite codes, client IPs). */
+const SECRET_KEY = /token|code|secret|authorization|cookie|^ip$/i;
 
 /**
  * Structured JSON logger. Values under secret-looking keys are redacted, and callers only
