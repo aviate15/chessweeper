@@ -14,6 +14,10 @@ export interface Scenario {
   readonly craters?: readonly string[];
   readonly config?: GameConfig;
   readonly status?: GameStatus;
+  /** Turns since the last capture (default 0). */
+  readonly noCaptureCount?: number;
+  /** Sides that still have their safe first move (default none, so scenarios behave literally). */
+  readonly safeStart?: { readonly w: boolean; readonly b: boolean };
   readonly checkException?: Color | null;
 }
 
@@ -45,11 +49,15 @@ export function gameFromScenario(scenario: Scenario): GameState {
       revealed: squares(scenario.revealed ?? []),
       craters: squares(scenario.craters ?? []),
       lives: scenario.lives ?? { w: config.kingLives, b: config.kingLives },
-      noCaptureCount: 0,
+      noCaptureCount: scenario.noCaptureCount ?? 0,
       status: scenario.status ?? { kind: "ongoing" },
       checkException: scenario.checkException ?? null,
     },
-    hidden: { mines },
+    hidden: {
+      mines,
+      safeStart: scenario.safeStart ?? { w: false, b: false },
+      chainCaptured: false,
+    },
     config,
   };
 }

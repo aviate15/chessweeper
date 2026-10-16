@@ -45,7 +45,8 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[T]` Starting count: `mineDensity` × 32 squares of ranks 3-6, using the same rounding and cap as 3.7. With the default `mineDensity = 0.25` that is **8 mines**.
 - `[D]` **Safe start**: each player's first move of the game cannot hit a mine, like Minesweeper's safe first click.
 - `[D]` Safe start uses **lazy relocation**: only the square the first move actually lands on is protected. If it holds a mine, the server moves that mine before the landing resolves. Players never see the relocation. (Protecting every possible first-move destination is impossible: White's and Black's first moves together reach all 32 squares of ranks 3-6.)
-- `[D]` The relocated mine goes to a uniformly random free square on ranks 3-6 that is **not adjacent to any revealed square**, so no number already on the board changes.
+- `[D]` The relocated mine goes to a uniformly random free square (no piece, no mine, not the landing square) on ranks 3-6 that touches **exactly the same set of revealed squares as the old square**, so every revealed number stays identical. When the old square touches no revealed square, this means the new square is not adjacent to any revealed square.
+- `[D]` If no such square exists on ranks 3-6, the search widens to any free square on any rank (same condition). If still none, the mine is silently removed (one fewer mine until the next reshuffle). Revealed numbers next to it then update as usual (the one case where a safe-start change can show). The first move is always safe.
 - `[D]` Safe start applies only to each side's first move of the game, never after a reshuffle. A relocation is not a reshuffle and does not affect the reshuffle counter.
 - `[D]` Idle mines are **not part of this version** (parked, see section 5).
 
@@ -110,11 +111,11 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 ### 3.7 Reshuffle (full reset, anti-stall)
 
 - `[D]` Every **10 total turns** (5 per player) without a capture, all mines are randomly reshuffled. This keeps the game moving. It replaces the original idea ("a mine flagged for more than 5 moves triggers a random reset"). Starting value, tunable after playtesting.
-- `[D]` The counter starts at 0 at game start and resets to 0 after each reshuffle. Only a capture resets it otherwise. A turn with an explosion counts as a normal turn and does not reset it.
+- `[D]` The counter starts at 0 at game start and resets to 0 after each reshuffle. It counts completed turns; a check-exception chain counts as one turn. Any turn in which a piece is captured resets it to 0, including an en passant capture whose capturer then explodes. A turn with an explosion counts as a normal turn and does not reset it. The counter does not change while a chain is pending or on the turn that ends the game.
 - `[D]` **Timing**: the reshuffle fires at the very end of a turn, after the whole check-exception chain and the game-end checks, and only if the game continues.
 - `[D]` Placement is **truly random**: uniform over all unoccupied squares, with no exclusions (not even near kings). Never on an occupied square. Mines may land on empty squares on ranks 1-2 and 7-8.
 - `[D]` After a reshuffle the mine count is **`mineDensity` × the free (unoccupied) squares at that moment**, rounded **half-up** (e.g. 7.5 → 8), then capped at `mineCap` if one is set. It grows denser as pieces leave the board, matching "mines everywhere in the endgame". Not just the survivors from before.
-- `[T]` Tunable config values: `mineDensity = 0.25`, `mineCap = none`. Add a cap if endgames get too brutal.
+- `[T]` Tunable config values: `mineDensity = 0.25`, `mineCap = none`, `reshuffleInterval = 10`. Add a cap if endgames get too brutal.
 - `[D]` A reshuffle **re-hides all revealed numbers**, **clears all craters** (mines moved, so old craters would be stale) and **clears all private flags**.
 
 ### 3.8 Turn resolution (derived from the rules above)
@@ -126,7 +127,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 5. If a king reaches 0 lives, the game ends and that side loses (3.6 precedence).
 6. If an explosion left the mover's own king in check, the same side moves again (3.4). This is still the same turn: go back to step 1. No resolving move = checkmate.
 7. Otherwise the turn passes. Check, checkmate and stalemate are evaluated for the opponent.
-8. End of turn: the no-capture counter updates (a capture resets it). At 10 turns a reshuffle fires, if the game continues.
+8. End of turn, only if the turn passed and the game continues: the no-capture counter updates (a capture resets it). At `reshuffleInterval` (10) turns a reshuffle fires and the counter resets. Events: `Reshuffled` is public; `MineRelocated` (safe start) is server-only and never sent to clients.
 
 ---
 
@@ -173,6 +174,8 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 10-turn full re
 ---
 
 ## 8. Change log
+
+- 2026-10-16: Safe-start relocation keeps every revealed number identical (new square touches the same revealed squares as the old one); widens to any rank, then drops the mine, if no square exists. The no-capture counter counts completed turns (a chain counts once), resets on any turn that captures a piece (including an en passant whose capturer explodes), and is frozen while a chain is pending or the game ends. `reshuffleInterval = 10` is a tunable config value. `MineRelocated` is a server-only event.
 
 - 2026-10-16: Check-exception checkmate is decided: no resolving move after an explosion means checkmate and the mover loses. A chain of follow-up moves is one turn (fullmove advances once). Moves after game over are rejected. Castling resolves the king landing before the rook.
 

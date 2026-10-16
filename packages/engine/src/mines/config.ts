@@ -5,9 +5,16 @@ export interface GameConfig {
   /** Optional upper limit on the mine count; null for none. */
   readonly mineCap: number | null;
   readonly kingLives: number;
+  /** Turns without a capture before the mines are reshuffled (3.7). */
+  readonly reshuffleInterval: number;
 }
 
-export const DEFAULT_CONFIG: GameConfig = { mineDensity: 0.25, mineCap: null, kingLives: 3 };
+export const DEFAULT_CONFIG: GameConfig = {
+  mineDensity: 0.25,
+  mineCap: null,
+  kingLives: 3,
+  reshuffleInterval: 10,
+};
 
 /**
  * Mines for a given number of free squares: density × free, rounded half-up, then capped

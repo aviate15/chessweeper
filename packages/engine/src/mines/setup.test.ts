@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { rankOf } from "../chess/square";
+import { DEFAULT_CONFIG } from "./config";
 import { createSeededRng } from "./rng";
 import { gameFromScenario } from "./scenario";
 import { createGame } from "./setup";
@@ -37,7 +38,7 @@ describe("createGame", () => {
   it("honours a custom density and cap", () => {
     const game = createGame({
       rng: createSeededRng(1),
-      config: { mineDensity: 0.5, mineCap: 10, kingLives: 3 },
+      config: { ...DEFAULT_CONFIG, mineDensity: 0.5, mineCap: 10 },
     });
     expect(game.hidden.mines.size).toBe(10);
   });

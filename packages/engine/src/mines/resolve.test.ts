@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { moveToUci } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
 import { parseSquare } from "../chess/square";
+import { createSeededRng } from "./rng";
 import { gameFromScenario, type Scenario } from "./scenario";
 import { IllegalMoveError, resolveMove } from "./resolve";
 import type { GameState } from "./state";
@@ -16,7 +17,7 @@ function sq(name: string): number {
 function play(game: GameState, uci: string) {
   const move = legalMoves(game.position).find((m) => moveToUci(m) === uci);
   if (move === undefined) throw new Error(`${uci} is not legal here`);
-  return resolveMove(game, move);
+  return resolveMove(game, move, createSeededRng(1));
 }
 
 const types = (events: readonly { type: string }[]) => events.map((e) => e.type);
@@ -180,6 +181,8 @@ describe("illegal moves", () => {
     const start = scenario({ fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" });
     const e2e4 = legalMoves(start.position).find((m) => moveToUci(m) === "e2e4");
     if (e2e4 === undefined) throw new Error("setup");
-    expect(() => resolveMove(scenario({ fen: kingsOnly }), e2e4)).toThrow(IllegalMoveError);
+    expect(() => resolveMove(scenario({ fen: kingsOnly }), e2e4, createSeededRng(1))).toThrow(
+      IllegalMoveError,
+    );
   });
 });

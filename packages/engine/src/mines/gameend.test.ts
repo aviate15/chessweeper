@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { isInCheck } from "../chess/attacks";
 import { GameOverError, resolveMove } from "./resolve";
+import { createSeededRng } from "./rng";
 import { gameFromScenario } from "./scenario";
 import { eventTypes, play } from "./test-utils";
 import { legalMoves } from "../chess/movegen";
@@ -114,7 +115,7 @@ describe("after the game is over", () => {
     const { state } = play(game, "e1e2");
     const move = legalMoves(state.position)[0];
     if (move === undefined) throw new Error("setup");
-    expect(() => resolveMove(state, move)).toThrow(GameOverError);
+    expect(() => resolveMove(state, move, createSeededRng(1))).toThrow(GameOverError);
   });
 
   // 3.6: moves are rejected.
@@ -126,6 +127,6 @@ describe("after the game is over", () => {
     });
     const move = legalMoves(over.position)[0];
     if (move === undefined) throw new Error("setup");
-    expect(() => resolveMove(over, move)).toThrow(GameOverError);
+    expect(() => resolveMove(over, move, createSeededRng(1))).toThrow(GameOverError);
   });
 });

@@ -2,9 +2,13 @@ import { applyMove } from "../chess/apply";
 import { castleRookSquares, type Move } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
 import type { Piece } from "../chess/types";
+import type { Rng } from "./rng";
 import type { GameEvent } from "./events";
+import { nextNoCaptureCount } from "./counter";
 import { finishTurn } from "./endturn";
 import { resolveLanding, type Working } from "./landing";
+import { reshuffle } from "./reshuffle";
+import { relocateSafeStartMine } from "./safestart";
 import type { GameState } from "./state";
 
 /** The move is not a legal chess move in the current position. */
@@ -37,7 +41,7 @@ export interface Resolution {
  * - captures never hit mines (3.5).
  * Immutable: returns a new state and the events, leaving the input untouched.
  */
-export function resolveMove(state: GameState, move: Move): Resolution {
+export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution {
   if (state.public.status.kind === "over") throw new GameOverError();
   const legal = legalMoves(state.position).find(
     (m) => m.from === move.from && m.to === move.to && m.promotion === move.promotion,
@@ -61,6 +65,14 @@ export function resolveMove(state: GameState, move: Move): Resolution {
     work.events.push({ type: "PieceCaptured", square: legal.captureSquare, piece: legal.captured });
   }
 
+  // 3.1 safe start: a side's very first move of the game cannot hit a mine, so a mine under
+  // its landing square is moved away before the landing resolves. The flag is spent either way.
+  const safeStart = { ...state.hidden.safeStart };
+  if (safeStart[mover]) {
+    if (work.mines.has(legal.to)) relocateSafeStartMine(work, legal.to, rng);
+    safeStart[mover] = false;
+  }
+
   // Landings resolve in order: the moving piece, then (castling only) the rook. A king
   // that loses its last life ends the game, so nothing after that landing resolves.
   // The landing piece is the original one, so a pawn on a mined promotion square dies as a
@@ -81,6 +93,19 @@ export function resolveMove(state: GameState, move: Move): Resolution {
   }
 
   const end = finishTurn({ before: state.position, moved, work, move: legal, mover, destroyed });
+  // 3.7, 3.8 step 8: only a completed turn in a game that goes on counts. A pending chain
+  // and the game-ending turn leave the counter alone, and neither can trigger a reshuffle.
+  // A capture earlier in a check-exception chain still makes this a capture turn.
+  const captured = state.hidden.chainCaptured || legal.captured !== null;
+  let noCaptureCount = state.public.noCaptureCount;
+  if (end.status.kind === "ongoing" && end.checkException === null) {
+    noCaptureCount = nextNoCaptureCount(noCaptureCount, captured);
+    if (noCaptureCount >= state.config.reshuffleInterval) {
+      reshuffle(work, end.position.board, state.config, rng);
+      noCaptureCount = 0;
+    }
+  }
+
   return {
     state: {
       ...state,
@@ -92,8 +117,13 @@ export function resolveMove(state: GameState, move: Move): Resolution {
         lives: { w: work.lives.w, b: work.lives.b },
         status: end.status,
         checkException: end.checkException,
+        noCaptureCount,
       },
-      hidden: { mines: work.mines },
+      hidden: {
+        mines: work.mines,
+        safeStart,
+        chainCaptured: end.checkException !== null && captured,
+      },
     },
     events: work.events,
   };
