@@ -10,3 +10,4 @@ export * from "./chess/move";
 export { applyMove } from "./chess/apply";
 export { legalMoves } from "./chess/movegen";
 export * from "./chess/status";
+export { perft, perftDivide } from "./chess/perft";

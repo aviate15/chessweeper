@@ -35,6 +35,7 @@ Node 24 (`.nvmrc`; >=22 works), pnpm 12. Run from the repo root.
 - `pnpm install`: install all workspace dependencies.
 - `pnpm test`: run every Vitest project once (`pnpm test:watch` to watch).
 - `pnpm --filter @chessweeper/engine test`: test a single package.
+- `pnpm --filter @chessweeper/engine perft:deep`: opt-in deep perft (slow; not run in CI).
 - `pnpm lint`: ESLint (strict type-checked; engine purity rules).
 - `pnpm typecheck`: `tsc --noEmit` for root configs and every package.
 - `pnpm format` / `pnpm format:check`: Prettier.
