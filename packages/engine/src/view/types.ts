@@ -131,7 +131,8 @@ export interface GameOverView {
    * Manual mode (3.10): who placed each live mine, each list sorted (a big mine is in
    * both). Null in Auto mode.
    */
-  readonly owned: { readonly w: readonly Square[]; readonly b: readonly Square[] } | null;
+  /** Who placed each mine; present only in Manual mine games (3.10). */
+  readonly owned?: { readonly w: readonly Square[]; readonly b: readonly Square[] } | undefined;
 }
 
 export type SafeErrorCode = "illegal-move" | "game-over" | "not-playing" | "internal";

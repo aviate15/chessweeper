@@ -10,6 +10,7 @@ export const ERROR_CODES = [
   "game-over",
   "internal",
   "forbidden",
+  "not-playing",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -25,4 +26,5 @@ export const ERROR_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   "game-over": "The game is over",
   internal: "Internal error",
   forbidden: "Not allowed",
+  "not-playing": "Mines are being placed",
 };
