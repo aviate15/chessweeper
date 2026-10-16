@@ -215,3 +215,45 @@ body {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Pixel-art style tile (M11): mirrors sprites/palette.ts. Used by the /sprites page. */
+:root {
+  --px-black: #000000;
+  --px-white: #ffffff;
+  --px-silver: #c0c0c0;
+  --px-gray: #808080;
+  --px-dark-gray: #404040;
+  --px-teal: #008080;
+  --px-tile-dark: #7f9aa0;
+  --px-tile-dark-hi: #b4ccd0;
+  --px-tile-dark-shadow: #3f5a60;
+  --px-num-1: #0000ff;
+  --px-num-2: #008000;
+  --px-num-3: #ff0000;
+  --px-num-4: #000080;
+  --px-num-5: #800000;
+  --px-num-6: #008080;
+  --px-num-7: #000000;
+  --px-num-8: #808080;
+  --px-red: #ff0000;
+  --px-maroon: #800000;
+  --px-orange: #ff8000;
+  --px-yellow: #ffff00;
+  --px-green: #00a000;
+  --px-navy: #000080;
+  --px-blue: #0000ff;
+  --px-ivory: #f5ebc8;
+  --px-ivory-hi: #fffff0;
+  --px-ivory-shade: #cdbf8f;
+  --px-gold: #d9a21b;
+  --px-charcoal: #3b3b46;
+  --px-charcoal-hi: #646474;
+  --px-charcoal-shade: #22222a;
+  --px-crimson: #d81e3c;
+  --px-led-red: #ff2020;
+  --px-led-red-dim: #3a0000;
+  --px-led-green: #20ff40;
+  --px-led-green-dim: #003a0a;
+  --px-led-amber: #ffb000;
+  --px-led-amber-dim: #3a2800;
+}

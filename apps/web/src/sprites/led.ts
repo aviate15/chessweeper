@@ -41,7 +41,7 @@ function digit(lit: string, blank = false): Sprite {
     for (const [name, [sx, sy, rows]] of Object.entries(SEG)) {
       const on = lit.includes(name);
       rows.forEach((row, dy) => {
-        [...row].forEach((c, dx) => {
+        row.split("").forEach((c, dx) => {
           const line = grid[sy + dy];
           if (c === "#" && line) line[sx + dx] = on ? "r" : "n";
         });

@@ -2,18 +2,23 @@ import type { Sprite } from "./types";
 
 /** Swap palette keys in a sprite (used to colour one hand-drawn shape two ways). */
 export const recolor = (s: Sprite, map: Readonly<Record<string, string>>): Sprite =>
-  s.map((row) => [...row].map((c) => map[c] ?? c).join(""));
+  s.map((row) =>
+    row
+      .split("")
+      .map((c) => map[c] ?? c)
+      .join(""),
+  );
 
 export const solid = (w: number, h: number, ch: string): Sprite =>
   Array.from({ length: h }, () => ch.repeat(w));
 
 /** Draw `top` over `base` at (x, y); "." in `top` is transparent. */
 export function overlay(base: Sprite, top: Sprite, x = 0, y = 0): Sprite {
-  const rows = base.map((r) => [...r]);
+  const rows = base.map((r) => r.split(""));
   top.forEach((trow, ty) => {
     const row = rows[y + ty];
     if (!row) throw new Error("overlay out of bounds (y)");
-    [...trow].forEach((c, tx) => {
+    trow.split("").forEach((c, tx) => {
       if (c === ".") return;
       if (x + tx >= row.length) throw new Error("overlay out of bounds (x)");
       row[x + tx] = c;

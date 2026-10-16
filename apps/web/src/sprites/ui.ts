@@ -41,28 +41,22 @@ const TEXT_BAR_SHORT: Sprite = solid(34, 2, "K");
 
 const SAMPLE_BUTTON = overlay(BUTTON_UP, solid(8, 2, "K"), 20, 9);
 
-export const DIALOG_SAMPLE: Sprite = 
+export const DIALOG_SAMPLE: Sprite = overlay(
   overlay(
     overlay(
-      overlay(
-        overlay(
-          overlay(overlay(DIALOG_FRAME, TITLE_BAR, 3, 3), CLOSE_BOX, 103, 4),
-          MINE,
-          8,
-          24,
-        ),
-        TEXT_BAR,
-        30,
-        28,
-      ),
-      TEXT_BAR_SHORT,
+      overlay(overlay(overlay(DIALOG_FRAME, TITLE_BAR, 3, 3), CLOSE_BOX, 103, 4), MINE, 8, 24),
+      TEXT_BAR,
       30,
-      36,
+      28,
     ),
-    SAMPLE_BUTTON,
+    TEXT_BAR_SHORT,
+    30,
     36,
-    54,
-  );
+  ),
+  SAMPLE_BUTTON,
+  36,
+  54,
+);
 
 // ---- Icons (16x16) ----
 export const ICON_FLAG_MODE: Sprite = overlay(
@@ -160,4 +154,9 @@ const TINY_MINE: Sprite = [
   ".K.K.K.",
   "...K...",
 ];
-export const FAVICON: Sprite = overlay(overlay(solid(16, 16, "T"), PIECE_SPRITES.wn), TINY_MINE, 9, 9);
+export const FAVICON: Sprite = overlay(
+  overlay(solid(16, 16, "T"), PIECE_SPRITES.wn),
+  TINY_MINE,
+  9,
+  9,
+);
