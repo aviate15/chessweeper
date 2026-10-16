@@ -73,9 +73,9 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` A non-king piece landing on a live mine is **destroyed**. The move is wasted (no benefit) and play passes to the opponent.
 - `[D]` The mine is consumed when triggered, for every piece type.
 - `[D]` **Check exception**: if a piece dies on a mine and that leaves the mover's **own king** in check (e.g. a blocker explodes), the mover does not lose the turn. They must immediately make another move that resolves the check: move the king, or force some other resolving move (block or capture the checker). Original wording: "if you put a bishop somewhere and it blows up and it causes a discovered check on the king, then the king gets to move".
-- `[T]` If the mover has no move that resolves the check after the explosion, that is checkmate (see 3.6).
+- `[D]` If the mover has no move that resolves the check after the explosion, that is **checkmate and the mover loses** (see 3.6).
 - `[D]` The follow-up move can itself hit another mine (any landing counts), so chain reactions are possible.
-- `[D]` The explosion and all its follow-up moves form **one turn** (one tick of the reshuffle counter).
+- `[D]` The explosion and all its follow-up moves form **one turn** (one tick of the reshuffle counter). The fullmove number advances once for the whole chain.
 - `[D]` A triggered mine leaves a public **crater** on the square. The mine is consumed, so pieces can land on a crater safely afterwards.
 - `[D]` An exploded piece still counts as having moved: **castling rights are lost** whenever the king or a rook moves, even when the move ends in an explosion.
 - `[D]` A double-pushed pawn destroyed on a mine sets **no en passant target**.
@@ -100,6 +100,8 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` Checkmate is judged by standard chess rules and ignores hidden mines. A mined escape square still counts as an escape (the king pays a life to use it), so a king is only checkmated when it has no chess-legal move at all.
 - `[D]` A king on 1 life follows normal chess rules. It may step onto any unrevealed square at its own risk.
 - `[D]` Stalemate is a draw, as in normal chess.
+- `[D]` Moves are **rejected once the game is over**.
+- `[D]` Castling lands the king first, then the rook. If the king's landing ends the game (last life lost), nothing else resolves.
 - `[D]` **No other automatic draws**: no threefold repetition, no 50-move rule, no insufficient-material draw.
 - `[D]` Players can **resign** or **offer a draw** (the opponent accepts or declines).
 - `[D]` **No clocks** in v1.
@@ -171,6 +173,8 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 10-turn full re
 ---
 
 ## 8. Change log
+
+- 2026-10-16: Check-exception checkmate is decided: no resolving move after an explosion means checkmate and the mover loses. A chain of follow-up moves is one turn (fullmove advances once). Moves after game over are rejected. Castling resolves the king landing before the rook.
 
 - 2026-10-16: Explosion side effects: castling rights are lost even if the king/rook move ends in an explosion; a double-pushed pawn destroyed on a mine sets no en passant target; an en passant chance still stands for the follow-up move. Craters reveal numbers like any other square when a piece survives a landing there.
 
