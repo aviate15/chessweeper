@@ -597,6 +597,7 @@ button {
 
 .status-fixed {
   flex: none;
+  white-space: pre; /* keep the spaces around the separators inside the flex row */
 }
 
 /* Only the narration gives way on a long line; turn, settings and seat stay visible. */
