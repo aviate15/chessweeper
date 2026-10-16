@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { START_FEN } from "../chess/fen";
+import { toGameOverView } from "../view/gameover";
 import { toPublicView } from "../view/public";
 import { tryEndGame } from "../view/errors";
 import { endGame } from "./endgame";
-import { GameOverError } from "./resolve";
+import { GameOverError, resolveMove } from "./resolve";
+import { createSeededRng } from "./rng";
 import { gameFromScenario } from "./scenario";
 
 const fresh = () => gameFromScenario({ fen: START_FEN, noCaptureCount: 4 });
@@ -78,5 +80,45 @@ describe("endGame", () => {
   it("tryEndGame succeeds on a running game", () => {
     const result = tryEndGame(fresh(), { reason: "resignation", by: "w" });
     expect(result.ok).toBe(true);
+  });
+
+  // 3.6 log entry colour is the side that agreed or was absent
+  it("logs agreement and abandonment under the named side", () => {
+    expect(endGame(fresh(), { reason: "agreement", by: "b" }).state.public.log[0]?.color).toBe("b");
+    expect(endGame(fresh(), { reason: "abandonment", by: "w" }).state.public.log[0]?.color).toBe(
+      "w",
+    );
+  });
+
+  // 3.6 final mine layout is revealed once the game ends, however it ended
+  it("reveals the final mine layout after a non-move ending", () => {
+    const state = gameFromScenario({ fen: START_FEN, mines: ["e4", "d5"] });
+    expect(toGameOverView(state, null)).toBeNull();
+    const ended = endGame(state, { reason: "resignation", by: "w" }).state;
+    expect(toGameOverView(ended, null)?.mines).toHaveLength(2);
+  });
+
+  // 3.6 moves are rejected after a non-move ending
+  it("rejects moves after a non-move ending", () => {
+    const { state } = endGame(fresh(), { reason: "resignation", by: "b" });
+    const move = {
+      from: 12,
+      to: 28,
+      piece: "p",
+      captured: null,
+      captureSquare: null,
+      promotion: null,
+      castle: null,
+      enPassant: false,
+      doublePush: true,
+    } as const;
+    expect(() => resolveMove(state, move, createSeededRng(1))).toThrow(GameOverError);
+  });
+
+  // 3.4, 3.6 resigning mid-chain as the other side also clears the chain
+  it("clears a pending chain when the other side ends the game", () => {
+    const pending = gameFromScenario({ fen: START_FEN, checkException: "w" });
+    const { state } = endGame(pending, { reason: "abandonment", by: "b" });
+    expect(state.public.checkException).toBeNull();
   });
 });
