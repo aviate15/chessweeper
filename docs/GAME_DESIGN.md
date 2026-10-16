@@ -46,7 +46,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` **Safe start**: each player's first move of the game cannot hit a mine, like Minesweeper's safe first click.
 - `[D]` Safe start uses **lazy relocation**: only the square the first move actually lands on is protected. If it holds a mine, the server moves that mine before the landing resolves. Players never see the relocation. (Protecting every possible first-move destination is impossible: White's and Black's first moves together reach all 32 squares of ranks 3-6.)
 - `[D]` The relocated mine goes to a uniformly random free square (no piece, no mine, not the landing square) on ranks 3-6 that touches **exactly the same set of revealed squares as the old square**, so every revealed number stays identical. When the old square touches no revealed square, this means the new square is not adjacent to any revealed square.
-- `[D]` If no such square exists on ranks 3-6, the search widens to any free square on any rank (same condition). If still none, the mine is silently removed (one fewer mine until the next reshuffle). The first move is always safe.
+- `[D]` If no such square exists on ranks 3-6, the search widens to any free square on any rank (same condition). If still none, the mine is silently removed (one fewer mine until the next reshuffle). Revealed numbers next to it then update as usual (the one case where a safe-start change can show). The first move is always safe.
 - `[D]` Safe start applies only to each side's first move of the game, never after a reshuffle. A relocation is not a reshuffle and does not affect the reshuffle counter.
 - `[D]` Idle mines are **not part of this version** (parked, see section 5).
 

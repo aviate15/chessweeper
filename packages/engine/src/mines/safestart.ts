@@ -2,6 +2,7 @@ import { KING_STEPS } from "../chess/attacks";
 import { offsetSquare, rankOf } from "../chess/square";
 import type { Square } from "../chess/types";
 import type { Working } from "./landing";
+import { adjacentMineCount } from "./numbers";
 import type { Rng } from "./rng";
 
 /** Ranks 3-6 (0-based 2..5), where mines start (design doc 3.1). */
@@ -46,4 +47,17 @@ export function relocateSafeStartMine(work: Working, square: Square, rng: Rng): 
   work.mines.delete(square);
   if (to !== null) work.mines.add(to);
   work.events.push({ type: "MineRelocated", from: square, to });
+
+  // A dropped mine cannot keep the revealed numbers identical, so the revealed squares next
+  // to it update as usual (3.2: numbers are live).
+  if (to === null) {
+    const updates: { square: Square; number: number }[] = [];
+    for (const [df, dr] of KING_STEPS) {
+      const neighbour = offsetSquare(square, df, dr);
+      if (neighbour !== null && work.revealed.has(neighbour)) {
+        updates.push({ square: neighbour, number: adjacentMineCount(work.mines, neighbour) });
+      }
+    }
+    if (updates.length > 0) work.events.push({ type: "NumbersChanged", updates });
+  }
 }

@@ -10,10 +10,10 @@ import { START_FEN, toFen } from "../chess/fen";
 import { legalMoves } from "../chess/movegen";
 import { parseFen } from "../chess/fen";
 import { fileOf, rankOf, squareName } from "../chess/square";
-import { DEFAULT_CONFIG } from "./config";
+import { DEFAULT_CONFIG, mineCountFor } from "./config";
 import { revealedNumbers } from "./numbers";
 import { GameOverError, resolveMove } from "./resolve";
-import { createSeededRng, pickDistinct } from "./rng";
+import { createSeededRng, pickDistinct, type Rng } from "./rng";
 import { gameFromScenario } from "./scenario";
 import { createGame } from "./setup";
 import type { GameState } from "./state";
@@ -52,7 +52,8 @@ function checkInvariants(state: GameState, initialMines: number): void {
   // A square is a live mine, a crater, or neither; revealed squares never hold a mine.
   for (const crater of state.public.craters) expect(state.hidden.mines.has(crater)).toBe(false);
   for (const square of state.public.revealed) expect(state.hidden.mines.has(square)).toBe(false);
-  // Mines are conserved until the reshuffle exists: each is either live or a crater.
+  // Between reshuffles mines are conserved: each is either live or a crater (a dropped
+  // safe-start relocation is the only way to lose one).
   expect(state.hidden.mines.size + state.public.craters.size).toBe(initialMines);
   // 3.6: lives stay within 0..3.
   const { w, b } = state.public.lives;
@@ -60,6 +61,9 @@ function checkInvariants(state: GameState, initialMines: number): void {
     expect(lives).toBeGreaterThanOrEqual(0);
     expect(lives).toBeLessThanOrEqual(3);
   }
+  // 3.7: the counter stays below the reshuffle interval (reaching it triggers the reshuffle).
+  expect(state.public.noCaptureCount).toBeGreaterThanOrEqual(0);
+  expect(state.public.noCaptureCount).toBeLessThan(state.config.reshuffleInterval);
   // 3.2: live numbers match a brute-force recount.
   for (const [square, number] of revealedNumbers(state)) {
     expect(number).toBe(bruteForceCount(state, square));
@@ -103,10 +107,13 @@ interface Tally {
   checkExceptions: number;
   kingDeaths: number;
   checkmates: number;
+  reshuffles: number;
+  relocations: number;
+  droppedRelocations: number;
 }
 
 /** Plays up to `choices.length` random moves, checking the invariants after each. */
-function playRandomly(start: GameState, choices: readonly number[], tally: Tally): void {
+function playRandomly(start: GameState, choices: readonly number[], tally: Tally, rng: Rng): void {
   let expectedMines = start.hidden.mines.size + start.public.craters.size;
   let state = start;
   checkInvariants(state, expectedMines);
@@ -119,12 +126,42 @@ function playRandomly(start: GameState, choices: readonly number[], tally: Tally
 
     const before = snapshot(state);
     const fullmoveBefore = state.position.fullmoveNumber;
-    const result = resolveMove(state, move, createSeededRng(1));
+    const numbersBefore = revealedNumbers(state);
+    const result = resolveMove(state, move, rng);
     expect(snapshot(state)).toBe(before); // inputs are never mutated
     state = result.state;
-    // A reshuffle starts a fresh mine population (3.7); the formula is checked in commit 5.
-    if (result.events.some((e) => e.type === "Reshuffled")) {
-      expectedMines = state.hidden.mines.size + state.public.craters.size;
+    // 3.1: a relocation moves a mine without changing any revealed number; a mine is only lost
+    // when no square exists for it.
+    const relocation = result.events.find((e) => e.type === "MineRelocated");
+    if (relocation?.type === "MineRelocated") {
+      tally.relocations += 1;
+      // (Not when the same turn also reshuffles, or when a second landing explodes: a castle
+      // in a mid-game position, whose rook landing safe start does not cover.)
+      const explained = result.events.some(
+        (e) => e.type === "Reshuffled" || e.type === "NumbersChanged",
+      );
+      if (!explained) {
+        for (const [square, number] of numbersBefore) {
+          expect(revealedNumbers(state).get(square)).toBe(number);
+        }
+      }
+      if (relocation.to === null) {
+        tally.droppedRelocations += 1;
+        expectedMines -= 1;
+      }
+    }
+    // 3.7: a reshuffle re-rolls the mines with round_half_up(density × free squares), and
+    // clears revealed numbers, craters and the counter.
+    const reshuffle = result.events.find((e) => e.type === "Reshuffled");
+    if (reshuffle?.type === "Reshuffled") {
+      tally.reshuffles += 1;
+      const free = state.position.board.filter((piece) => piece === null).length;
+      expect(state.hidden.mines.size).toBe(mineCountFor(free, state.config));
+      expect(reshuffle.mineCount).toBe(state.hidden.mines.size);
+      expect(state.public.craters.size).toBe(0);
+      expect(state.public.revealed.size).toBe(0);
+      expect(state.public.noCaptureCount).toBe(0);
+      expectedMines = state.hidden.mines.size;
     }
 
     for (const event of result.events) {
@@ -146,6 +183,9 @@ const emptyTally = (): Tally => ({
   checkExceptions: 0,
   kingDeaths: 0,
   checkmates: 0,
+  reshuffles: 0,
+  relocations: 0,
+  droppedRelocations: 0,
 });
 
 // Seeds are pinned so CI is reproducible (and the non-vacuity checks below are stable).
@@ -160,11 +200,13 @@ describe("mine invariants over random games", () => {
     fc.assert(
       fc.property(seedArb, choicesArb, (seed, choices) => {
         const config = { ...DEFAULT_CONFIG, mineDensity: 0.7 };
-        playRandomly(createGame({ rng: createSeededRng(seed), config }), choices, tally);
+        const rng = createSeededRng(seed);
+        playRandomly(createGame({ rng, config }), choices, tally, rng);
       }),
       { numRuns: 200, seed: 20261016 },
     );
     expect(tally.explosions).toBeGreaterThan(0);
+    expect(tally.relocations).toBeGreaterThan(0);
   });
 
   it("hold in mid-game positions sprinkled with mines (forces king hits and check exceptions)", () => {
@@ -175,8 +217,9 @@ describe("mine invariants over random games", () => {
         fc.nat({ max: 40 }),
         fc.integer({ min: 2, max: 9 }),
         fc.tuple(fc.integer({ min: 1, max: 3 }), fc.integer({ min: 1, max: 3 })),
+        fc.nat({ max: 9 }),
         choicesArb,
-        (seed, prelude, density, [whiteLives, blackLives], choices) => {
+        (seed, prelude, density, [whiteLives, blackLives], counter, choices) => {
           // Plain-chess prelude without mines, then mines on random empty squares.
           let position = parseFen(START_FEN);
           const rng = createSeededRng(seed);
@@ -193,8 +236,10 @@ describe("mine invariants over random games", () => {
             fen: toFen(position),
             mines: mines.map(squareName),
             lives: { w: whiteLives, b: blackLives },
+            noCaptureCount: counter,
+            safeStart: { w: true, b: true },
           });
-          playRandomly(game, choices, tally);
+          playRandomly(game, choices, tally, rng);
         },
       ),
       { numRuns: 400, seed: 20261016 },
@@ -204,5 +249,7 @@ describe("mine invariants over random games", () => {
     expect(tally.lifeLost).toBeGreaterThan(0);
     expect(tally.checkExceptions).toBeGreaterThan(0);
     expect(tally.kingDeaths).toBeGreaterThan(0);
+    expect(tally.reshuffles).toBeGreaterThan(0);
+    expect(tally.relocations).toBeGreaterThan(0);
   });
 });

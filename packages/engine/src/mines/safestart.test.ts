@@ -136,6 +136,16 @@ describe("safe start", () => {
       expect(w.mines.has(moved.to)).toBe(true);
     });
 
+    it("tells revealed neighbours when a dropped mine changes their number", () => {
+      const w = work([]);
+      for (const s of emptySquares(w)) w.mines.add(s);
+      w.mines.add(sq("a4"));
+      w.revealed.add(sq("a5")); // next to a4
+      w.mines.delete(sq("a5"));
+      relocateSafeStartMine(w, sq("a4"), createSeededRng(1));
+      expect(w.events.map((e) => e.type)).toEqual(["MineRelocated", "NumbersChanged"]);
+    });
+
     it("removes the mine when no free square exists at all", () => {
       const w = work([]);
       for (const s of emptySquares(w)) w.mines.add(s);
