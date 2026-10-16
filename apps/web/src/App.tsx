@@ -38,12 +38,15 @@ import {
   type Presentation,
 } from "./presentation";
 import { OptionsDialog } from "./components/OptionsDialog";
+import { RulesDialog } from "./components/RulesDialog";
 import {
   configFromOptions,
   loadFlip,
   loadOptions,
+  loadRulesHidden,
   saveFlip,
   saveOptions,
+  saveRulesHidden,
   type GameOptions,
 } from "./settings";
 import { BUTTON_PRESSED, BUTTON_UP, CLOSE_BOX } from "./sprites";
@@ -70,6 +73,7 @@ export interface AppProps {
 export function App({ rng, gate = true }: AppProps) {
   const [options, setOptions] = useState<GameOptions>(loadOptions);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(() => !loadRulesHidden());
   const config = useMemo(() => configFromOptions(options), [options]);
   const game = useLocalGame(rng ? { rng, config } : { config });
   const { view, gameOver, turnId, lastEvents } = game;
@@ -227,6 +231,10 @@ export function App({ rng, gate = true }: AppProps) {
     setDismissedTurn(-1);
   };
 
+  const openRules = () => {
+    setRulesOpen(true);
+  };
+
   const toggleFlip = () => {
     const next = !flip;
     setFlip(next);
@@ -286,6 +294,7 @@ export function App({ rng, gate = true }: AppProps) {
           onOptions={() => {
             setOptionsOpen(true);
           }}
+          onRules={openRules}
         />
         <InfoBar
           view={view}
@@ -295,6 +304,7 @@ export function App({ rng, gate = true }: AppProps) {
           gameOver={over}
           pendingDraw={game.offers.pending}
           onSmiley={newGame}
+          onRules={openRules}
           onFlagToggle={() => {
             setFlagMode((v) => !v);
           }}
@@ -325,6 +335,15 @@ export function App({ rng, gate = true }: AppProps) {
             onPick={onPromote}
             onCancel={() => {
               setPromotion(null);
+            }}
+          />
+        )}
+        {rulesOpen && (
+          <RulesDialog
+            config={config}
+            onClose={(dontShowAgain) => {
+              if (dontShowAgain) saveRulesHidden(true);
+              setRulesOpen(false);
             }}
           />
         )}

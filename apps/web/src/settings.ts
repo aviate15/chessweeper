@@ -90,3 +90,23 @@ export function configFromOptions(options: GameOptions): GameConfig {
     mineDensity: options.densityPercent / 100,
   };
 }
+
+const RULES_HIDDEN_KEY = "chessweeper.rulesHidden";
+
+/** True when the player ticked "Don't show again" on the rules page. */
+export function loadRulesHidden(): boolean {
+  try {
+    return localStorage.getItem(RULES_HIDDEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function saveRulesHidden(hidden: boolean): void {
+  try {
+    if (hidden) localStorage.setItem(RULES_HIDDEN_KEY, "1");
+    else localStorage.removeItem(RULES_HIDDEN_KEY);
+  } catch {
+    // Storage unavailable: the rules page simply shows again next time.
+  }
+}

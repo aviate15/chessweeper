@@ -4,6 +4,10 @@ test("play, flip, use the Game menu, resign and see the mines; /sprites renders"
   page,
 }) => {
   await page.goto("/");
+  // The rules page opens on first load; close it.
+  await expect(page.getByRole("dialog", { name: "Rules" })).toBeVisible();
+  await page.getByRole("button", { name: "OK" }).click();
+  await expect(page.getByRole("dialog", { name: "Rules" })).toBeHidden();
   await expect(page.getByRole("heading", { name: "Chessweeper" })).toBeVisible();
   await expect(page.locator("[data-square]")).toHaveCount(64);
   // White at the bottom at the start.

@@ -102,6 +102,7 @@ export interface InfoBarProps {
   crackColor: Color | null;
   gameOver: boolean;
   onSmiley: () => void;
+  onRules: () => void;
   onFlagToggle: () => void;
   onAcceptDraw: () => void;
   onDeclineDraw: () => void;
@@ -155,6 +156,18 @@ export function InfoBar(props: InfoBarProps) {
         >
           <Px sprite={ICON_FLAG_MODE} className="tool-icon" />
           <span>Flag {props.flagMode ? "on" : "off"}</span>
+        </button>
+        <button
+          type="button"
+          className="btn tool-btn tool-help"
+          aria-label="Rules"
+          title="Rules"
+          onClick={() => {
+            playCue("click");
+            props.onRules();
+          }}
+        >
+          ?
         </button>
         {pendingDraw !== null && !props.gameOver && (
           <div className="draw-offer" role="alert">
