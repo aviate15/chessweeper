@@ -30,7 +30,8 @@ const settings = z
     reshuffleInterval: z.number().int().min(-1_000_000).max(1_000_000),
     densityPercent: z.number().int().min(-1_000_000).max(1_000_000),
     // Manual mine mode (design doc 3.10). Absent means auto.
-    mode: z.enum(["auto", "manual"]).optional(),
+    // Any other value is treated as auto by clampSettings (3.10: unknown means auto).
+    mode: z.unknown().optional(),
   })
   // clampSettings carries `mode`; it is omitted from the result for auto games.
   .transform((raw) => clampSettings(raw));

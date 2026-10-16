@@ -27,15 +27,15 @@ describe("manual mode client messages", () => {
       expect(parse(m).ok).toBe(false);
     }
   });
-  it("accepts create_room mode and rejects unknown modes", () => {
+  it("accepts create_room mode; unknown modes mean auto", () => {
     const base = { reshuffleInterval: 10, densityPercent: 30 };
     const r = parse({ type: "create_room", settings: { ...base, mode: "manual" } });
     expect(r.ok && r.message.type === "create_room" && r.message.settings).toMatchObject({
       reshuffleInterval: 10,
     });
     expect(parse({ type: "create_room", settings: { ...base, mode: "auto" } }).ok).toBe(true);
-    expect(parse({ type: "create_room", settings: { ...base, mode: "chaos" } }).ok).toBe(false);
-    expect(parse({ type: "create_room", settings: { ...base, mode: null } }).ok).toBe(false);
+    expect(parse({ type: "create_room", settings: { ...base, mode: "chaos" } }).ok).toBe(true);
+    expect(parse({ type: "create_room", settings: { ...base, mode: null } }).ok).toBe(true);
   });
   it("still clamps out-of-range numbers alongside mode", () => {
     const r = parse({

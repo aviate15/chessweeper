@@ -82,12 +82,15 @@ const eventView = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("MinesAutoPlaced"), color, count }),
 ]);
 
-const settings = z.strictObject({
-  reshuffleInterval: z.number().int().min(1),
-  densityPercent: z.number().int().min(0).max(100),
-  // Omitted for auto games (engine GameSettings.mode is optional).
-  mode: z.enum(["auto", "manual"]).optional(),
-});
+const settings = z
+  .strictObject({
+    reshuffleInterval: z.number().int().min(1),
+    densityPercent: z.number().int().min(0).max(100),
+    // Omitted for auto games (engine GameSettings.mode is optional).
+    mode: z.enum(["auto", "manual"]).optional(),
+  })
+  // Drop an undefined `mode` so the output is exactly the engine's GameSettings.
+  .transform(({ mode, ...rest }) => (mode === undefined ? rest : { ...rest, mode }));
 
 const ready = z.strictObject({ w: z.boolean(), b: z.boolean() });
 const phase = z.discriminatedUnion("kind", [

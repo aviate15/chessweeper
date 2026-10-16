@@ -9,10 +9,12 @@ import {
   settingsFromConfig,
   type GameSettings,
   legalMoves,
-  projectEvents,
-  toGameOverView,
-  toPublicView,
+  finishPlacement,
+  markReady,
+  placeMine,
   toSafeError,
+  unplaceMine,
+  type PlacementResult,
   tryEndGame,
   tryResolveMove,
   IllegalMoveError,
@@ -35,6 +37,7 @@ import { clientIp, type ProxyMode } from "./ip";
 import type { StaticSite } from "./static";
 import { DEFAULT_LIMITS, TokenBucket, type Limits } from "./limits";
 import { createLogger, type Logger } from "./log";
+import { overFor, projectFor, viewFor } from "./manual";
 
 export interface ServerOptions {
   /** 0 picks an ephemeral port (tests). */
@@ -87,6 +90,9 @@ interface Room {
   /** An offerer may not offer again until they have made a move. */
   readonly mustMove: { w: boolean; b: boolean };
   expiry: unknown;
+  /** Manual mode: the running placement round's timer and its deadline, else undefined/null. */
+  placementTimer: unknown;
+  placementEndsAt: number | null;
   /** The game is over and the short removal timer is running. */
   finishing: boolean;
 }
@@ -152,6 +158,7 @@ export function createServer(options: ServerOptions): RunningServer {
   function closeRoom(room: Room): void {
     if (rooms.get(room.code) !== room) return;
     clock.clearTimeout(room.expiry);
+    clearPlacementTimer(room);
     for (const color of ["w", "b"] as const) {
       const seat = room.seats[color];
       if (seat === null) continue;
@@ -172,20 +179,80 @@ export function createServer(options: ServerOptions): RunningServer {
 
   // ---- state changes ----
 
+  // ---- manual mine mode: placement rounds (design doc 3.10) ----
+
+  const isPlacing = (room: Room): boolean =>
+    room.state.public.phase.kind === "placement" && room.state.public.status.kind === "ongoing";
+
+  function clearPlacementTimer(room: Room): void {
+    clock.clearTimeout(room.placementTimer);
+    room.placementTimer = undefined;
+    room.placementEndsAt = null;
+  }
+
+  /** Starts the round timer. Not before seat b has joined: the timer starts at join. */
+  function armPlacementTimer(room: Room): void {
+    clearPlacementTimer(room);
+    if (!isPlacing(room) || room.seats.b === null) return;
+    room.placementEndsAt = clock.now() + limits.placementMs;
+    room.placementTimer = clock.setTimeout(() => {
+      endPlacement(room);
+    }, limits.placementMs);
+  }
+
+  function placementMessage(room: Room): ServerMessage | null {
+    const phase = room.state.public.phase;
+    if (phase.kind !== "placement" || room.placementEndsAt === null) return null;
+    return {
+      type: "placement",
+      round: phase.round,
+      msLeft: Math.max(0, room.placementEndsAt - clock.now()),
+    };
+  }
+
+  function sendPlacementTimer(room: Room, only?: Color): void {
+    const message = placementMessage(room);
+    if (message === null) return;
+    for (const color of only === undefined ? (["w", "b"] as const) : [only]) {
+      toSeat(room, color, message);
+    }
+  }
+
+  /** The round ends (both ready, or the timer ran out): random fill, merge, start play. */
+  function endPlacement(room: Room): void {
+    clearPlacementTimer(room);
+    if (!isPlacing(room)) return;
+    const result = finishPlacement(room.state, rng);
+    room.state = result.state;
+    room.seq += 1;
+    broadcastUpdate(room, { state: result.state, events: result.events });
+  }
+
+  /** After any state change: a new placement round (after a reshuffle) starts its timer. */
+  function afterChange(room: Room): void {
+    if (room.state.public.status.kind === "over") {
+      clearPlacementTimer(room);
+    } else if (isPlacing(room) && room.placementEndsAt === null) {
+      armPlacementTimer(room);
+      sendPlacementTimer(room);
+    }
+  }
+
   function broadcastUpdate(room: Room, resolution: Resolution): void {
     for (const color of ["w", "b"] as const) {
       toSeat(room, color, {
         type: "update",
         seq: room.seq,
-        events: projectEvents(resolution.events),
-        view: toPublicView(room.state, color),
+        events: projectFor(resolution.events, color),
+        view: viewFor(room.state, color),
       });
     }
+    afterChange(room);
     if (room.state.public.status.kind === "over") {
       for (const color of ["w", "b"] as const) {
         const seat = room.seats[color];
         if (seat !== null) clock.clearTimeout(seat.graceTimer);
-        const over = toGameOverView(room.state, color);
+        const over = overFor(room.state, color);
         if (over !== null) toSeat(room, color, { type: "game_over", over });
       }
       // Free the room shortly after the game ends, once both have had time to load the result.
@@ -240,9 +307,10 @@ export function createServer(options: ServerOptions): RunningServer {
       token: seat.token,
       settings: settingsFromConfig(room.state.config),
     });
-    send(conn, { type: "snapshot", seq: room.seq, view: toPublicView(room.state, color) });
-    const over = toGameOverView(room.state, color);
+    send(conn, { type: "snapshot", seq: room.seq, view: viewFor(room.state, color) });
+    const over = overFor(room.state, color);
     if (over !== null) send(conn, { type: "game_over", over });
+    sendPlacementTimer(room, color);
 
     const opp = room.seats[other(color)];
     if (opp !== null) {
@@ -302,6 +370,8 @@ export function createServer(options: ServerOptions): RunningServer {
       drawOffer: null,
       mustMove: { w: false, b: false },
       expiry: undefined,
+      placementTimer: undefined,
+      placementEndsAt: null,
       finishing: false,
     };
     rooms.set(code, room);
@@ -339,6 +409,9 @@ export function createServer(options: ServerOptions): RunningServer {
     }
     room.seats.b = { token: newSeatToken(), conn: null, claimable: false, graceTimer: undefined };
     logger.info("room_joined");
+    // 3.10: the round-1 timer starts when the opponent joins (attach tells b the time left).
+    armPlacementTimer(room);
+    sendPlacementTimer(room);
     attach(room, "b", conn, false);
   }
 
@@ -350,6 +423,10 @@ export function createServer(options: ServerOptions): RunningServer {
   ): void {
     if (room.state.public.status.kind === "over") {
       sendError(conn, "game-over");
+      return;
+    }
+    if (isPlacing(room)) {
+      sendError(conn, "not-placing");
       return;
     }
     if (room.state.position.turn !== seat) {
@@ -377,6 +454,48 @@ export function createServer(options: ServerOptions): RunningServer {
     room.mustMove[seat] = false;
     lapseDraw(room); // 3.6: a pending offer lapses when any move is made
     broadcastUpdate(room, result.resolution);
+  }
+
+  /**
+   * place / unplace / placement_done (3.10). Drafts are private: place and unplace answer only
+   * the placer (a snapshot at the unchanged seq, so the opponent's frames and seq never depend
+   * on what or how much was placed). Only Done is public ("ready").
+   */
+  function handlePlacement(
+    conn: Conn,
+    room: Room,
+    seat: Color,
+    msg: Extract<ClientMessage, { type: "place" | "unplace" | "placement_done" }>,
+  ): void {
+    if (room.state.public.status.kind === "over") {
+      sendError(conn, "game-over");
+      return;
+    }
+    let result: PlacementResult;
+    switch (msg.type) {
+      case "place":
+        result = placeMine(room.state, seat, msg.sq);
+        break;
+      case "unplace":
+        result = unplaceMine(room.state, seat, msg.sq);
+        break;
+      case "placement_done":
+        result = markReady(room.state, seat);
+        break;
+    }
+    if (!result.ok) {
+      sendError(conn, result.error);
+      return;
+    }
+    room.state = result.state;
+    if (msg.type !== "placement_done") {
+      send(conn, { type: "snapshot", seq: room.seq, view: viewFor(room.state, seat) });
+      return;
+    }
+    room.seq += 1;
+    broadcastUpdate(room, { state: room.state, events: result.events });
+    const phase = room.state.public.phase;
+    if (phase.kind === "placement" && phase.ready.w && phase.ready.b) endPlacement(room);
   }
 
   function handleDrawOffer(conn: Conn, room: Room, seat: Color): void {
@@ -450,6 +569,12 @@ export function createServer(options: ServerOptions): RunningServer {
     switch (msg.type) {
       case "move": {
         handleMove(conn, room, seat, msg);
+        return;
+      }
+      case "place":
+      case "unplace":
+      case "placement_done": {
+        handlePlacement(conn, room, seat, msg);
         return;
       }
       case "resign":
