@@ -6,3 +6,5 @@ export * from "./chess/types";
 export * from "./chess/square";
 export * from "./chess/fen";
 export * from "./chess/attacks";
+export * from "./chess/move";
+export { applyMove } from "./chess/apply";
