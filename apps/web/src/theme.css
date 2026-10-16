@@ -113,9 +113,7 @@ button {
   justify-content: space-between;
   height: 16px;
   padding: 0 2px 0 4px;
-  background-image: var(--title-bar);
-  background-size: 100% 100%;
-  image-rendering: pixelated;
+  background: linear-gradient(90deg, var(--px-navy) 0 35%, #0840a8 35% 68%, #1084d0 68% 100%);
 }
 
 .title {
@@ -575,9 +573,7 @@ button {
   justify-content: space-between;
   height: 14px;
   padding: 0 1px 0 4px;
-  background-image: var(--title-bar);
-  background-size: 100% 100%;
-  image-rendering: pixelated;
+  background: linear-gradient(90deg, var(--px-navy) 0 35%, #0840a8 35% 68%, #1084d0 68% 100%);
 }
 
 .dialog-title {

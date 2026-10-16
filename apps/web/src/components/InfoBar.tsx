@@ -121,8 +121,8 @@ export function InfoBar(props: InfoBarProps) {
         <button
           type="button"
           className="smiley"
-          aria-label="Smiley: new game"
-          title="New game"
+          aria-label="Smiley: restart"
+          title="Restart"
           onClick={props.onSmiley}
         >
           <Px sprite={FACES[props.face]} className="smiley-face" />

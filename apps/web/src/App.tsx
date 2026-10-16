@@ -38,7 +38,7 @@ import {
   type Presentation,
 } from "./presentation";
 import { loadFlip, saveFlip } from "./settings";
-import { BUTTON_PRESSED, BUTTON_UP, CLOSE_BOX, TITLE_BAR } from "./sprites";
+import { BUTTON_PRESSED, BUTTON_UP, CLOSE_BOX } from "./sprites";
 import { useFit } from "./useFit";
 import { useLocalGame } from "./useLocalGame";
 
@@ -47,7 +47,6 @@ const NO_FX: readonly Fx[] = [];
 const CHROME_VARS = {
   "--btn-up": spriteUrl(BUTTON_UP),
   "--btn-down": spriteUrl(BUTTON_PRESSED),
-  "--title-bar": spriteUrl(TITLE_BAR),
 } as CSSProperties;
 
 export interface AppProps {
