@@ -23,3 +23,4 @@ export { toPublicView, projectEvents } from "./view/public";
 export { toGameOverView } from "./view/gameover";
 export * from "./view/client";
 export * from "./view/flags";
+export * from "./view/errors";
