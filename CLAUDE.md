@@ -41,6 +41,7 @@ Node 24 (`.nvmrc`; >=22 works), pnpm 12. Run from the repo root.
 - `pnpm format` / `pnpm format:check`: Prettier.
 - `pnpm check`: format:check, lint, typecheck and test. Must pass before saying work is done.
 - `pnpm build`: build packages that define a build script (none yet).
-- Dev servers: none yet (added with `apps/server` and `apps/web`).
+- Dev servers (online play): `pnpm --filter @chessweeper/server dev` (ws://localhost:8080, allows the Vite dev origin) and `pnpm --filter @chessweeper/web dev` (http://localhost:5173). Open two browser windows to play. Set `VITE_SERVER_URL` for a non-default server; production builds need it for Online... to be enabled.
+- `pnpm --filter @chessweeper/web e2e`: builds the client against a local server and runs Playwright, including the two-player online test.
 
 Hooks in `.claude/settings.json` auto-format edited files and block `git commit` when typecheck fails.
