@@ -13,5 +13,12 @@ export function toGameOverView(state: GameState, viewer: Color | null): GameOver
   return {
     view: toPublicView(state, viewer),
     mines: [...state.hidden.mines].sort((a, b) => a - b),
+    owned:
+      state.hidden.owned == null
+        ? null
+        : {
+            w: [...state.hidden.owned.w].sort((a, b) => a - b),
+            b: [...state.hidden.owned.b].sort((a, b) => a - b),
+          },
   };
 }

@@ -1,6 +1,6 @@
 import type { CastlingRights, Color, PieceType, PromotionPiece, Square } from "../chess/types";
 import type { GameSettings } from "../mines/settings";
-import type { GameOverReason, GameResult, GameStatus, Lives } from "../mines/state";
+import type { GameOverReason, GameResult, GameStatus, Lives, Phase } from "../mines/state";
 
 /**
  * What a client may know (design doc 3.2). Every type here is plain JSON data: arrays
@@ -48,7 +48,7 @@ export type EventView =
   | { readonly type: "GameOver"; readonly result: GameResult; readonly reason: GameOverReason }
   | { readonly type: "TurnPassed"; readonly to: Color }
   | { readonly type: "Reshuffled"; readonly mineCount: number }
-  // M-B: Manual mine mode (3.10) events, same shape as the engine events.
+  // Manual mine mode (3.10) events, same shape as the engine events.
   | { readonly type: "PlacementStarted"; readonly round: number; readonly quota: number }
   | { readonly type: "PlayerReady"; readonly color: Color }
   | { readonly type: "PlacementEnded"; readonly mineCount: number }
@@ -57,7 +57,9 @@ export type EventView =
       readonly square: Square;
       readonly by: PieceView;
       readonly area: readonly Square[];
-    };
+    }
+  /** Seat-private: only ever projected to its own colour (3.10), never to the opponent or null. */
+  | { readonly type: "MinesAutoPlaced"; readonly color: Color; readonly count: number };
 
 export interface LogEntryView {
   readonly color: Color;
@@ -68,6 +70,17 @@ export interface LogEntryView {
 export interface FallenView {
   readonly piece: PieceType;
   readonly cause: "capture" | "mine";
+}
+
+/**
+ * Manual mine placement as one client may see it (3.10). `own` is the viewer's own
+ * placements (a draft until they press Done); null for pass-and-play and spectators.
+ * The opponent's placements are never here: only `ready` says they are done.
+ */
+export interface PlacementView {
+  readonly quota: number;
+  readonly ready: { readonly w: boolean; readonly b: boolean };
+  readonly own: readonly Square[] | null;
 }
 
 export interface PublicView {
@@ -88,7 +101,17 @@ export interface PublicView {
   readonly mineCount: number;
   /** The settings this game runs with: public, so nobody is surprised by them (3.9). */
   readonly settings: GameSettings;
-  /** Turns left before the next reshuffle (3.7). */
+  /**
+   * Manual mode (3.10): public, so a reconnect sees it. Omitted in Auto mode, like
+   * `settings.mode`, so Auto views keep their exact shape; read it with `phaseOf`.
+   */
+  readonly phase?: Phase;
+  /** Manual mode only: non-null just during a placement round (3.10). Omitted in Auto. */
+  readonly placement?: PlacementView | null;
+  /**
+   * Turns left before the next reshuffle (3.7). A pure function of the counter: the counter
+   * is 0 during a placement round, so it reads the full interval until play begins.
+   */
   readonly turnsUntilReshuffle: number;
   readonly status: GameStatus;
   readonly checkException: Color | null;
@@ -104,9 +127,14 @@ export interface GameOverView {
   readonly view: PublicView;
   /** Mines still live at game end, sorted by square. */
   readonly mines: readonly Square[];
+  /**
+   * Manual mode (3.10): who placed each live mine, each list sorted (a big mine is in
+   * both). Null in Auto mode.
+   */
+  readonly owned: { readonly w: readonly Square[]; readonly b: readonly Square[] } | null;
 }
 
-export type SafeErrorCode = "illegal-move" | "game-over" | "internal";
+export type SafeErrorCode = "illegal-move" | "game-over" | "not-playing" | "internal";
 
 /** An error that is safe to send to a client: fixed text, never derived from engine state. */
 export interface SafeError {
