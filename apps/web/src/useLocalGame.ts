@@ -242,7 +242,7 @@ export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
     const state = stateRef.current;
     const placer = placerOf(state);
     if (placer === null) return;
-    const mine = state.hidden.drafts?.[placer]?.has(square) === true;
+    const mine = state.hidden.drafts?.[placer].has(square) === true;
     const result = mine ? unplaceMine(state, placer, square) : placeMine(state, placer, square);
     if (!result.ok) return;
     stateRef.current = result.state;

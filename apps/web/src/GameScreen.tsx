@@ -128,7 +128,8 @@ export function GameScreen({
 
   const over = view.status.kind === "over";
   /** Manual mine mode (3.10): a placement round replaces the board and info bar. */
-  const placing = !over && game.placement !== null && view.placement !== null;
+  const placementCtl = !over && view.placement !== null ? game.placement : null;
+  const placing = placementCtl !== null;
   const autoPlacedText =
     game.autoPlaced !== null && game.autoPlaced > 0
       ? `${String(game.autoPlaced)} ${game.autoPlaced === 1 ? "mine was" : "mines were"} placed at random for you`
@@ -431,11 +432,11 @@ export function GameScreen({
           onOnline={onOpenLobby}
           onLeave={requestLeave}
         />
-        {placing && game.placement !== null ? (
+        {placementCtl !== null ? (
           <PlacementScreen
             view={view}
-            msLeft={game.placement.msLeft}
-            color={game.placement.color}
+            msLeft={placementCtl.msLeft}
+            color={placementCtl.color}
             onToggle={onPlacementToggle}
             onDone={game.donePlacement}
             autoPlaced={null}

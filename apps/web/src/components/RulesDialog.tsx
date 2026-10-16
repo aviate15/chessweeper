@@ -7,6 +7,7 @@ import {
 import { useState, type ReactNode } from "react";
 import { playCue } from "../audio";
 import { Dialog } from "./Dialog";
+import { placementQuota } from "./placementTypes";
 import { Square } from "./Square";
 
 interface MiniCell {
@@ -80,6 +81,8 @@ export function RulesDialog({
   const [hide, setHide] = useState(false);
   const startMines = mineCountFor(32, configFromSettings(settings));
   const percent = settings.densityPercent;
+  const manual = settings.mode === "manual";
+  const quota = placementQuota(percent);
   return (
     <Dialog
       title="How to play"
@@ -98,10 +101,17 @@ export function RulesDialog({
 
         <h3>Mines and numbers</h3>
         <ul>
-          <li>
-            About {startMines} mines start hidden on ranks 3-6, never under a piece. Each
-            player&apos;s first move of the game can never hit a mine.
-          </li>
+          {manual ? (
+            <li>
+              No mines are placed for you. Each player secretly places up to {quota} mines before
+              play (see Manual mine mode below). There is no safe first move.
+            </li>
+          ) : (
+            <li>
+              About {startMines} mines start hidden on ranks 3-6, never under a piece. Each
+              player&apos;s first move of the game can never hit a mine.
+            </li>
+          )}
           <li>
             A number appears when a piece lands on a square and survives. That includes captures,
             both castling squares, en passant, promotion and craters.
@@ -202,21 +212,56 @@ export function RulesDialog({
         </ul>
 
         <h3>Manual mine mode</h3>
+        <p>
+          A second game mode, chosen when a game is created. In Auto mine mode (the default) the
+          game places the mines, as described above.
+        </p>
         <ul>
           <li>
-            In Manual mine mode the players place the mines. Before play, and again after every
-            reshuffle, each player marks the same number of mines on empty squares. Your marks are
-            private. Press Done when you are finished.
+            In Manual mine mode the players place the mines for each other. A placement round
+            happens before play and again after every reshuffle. No moves are allowed during
+            placement.
           </li>
           <li>
-            If you have not marked your full number when placing ends, the missing mines are placed
-            at random for you, and you are told how many.
+            Each player places up to the same number of mines on empty squares, at most one per
+            square. At the start that means ranks 3-6 only. With {percent}% density that is {quota}{" "}
+            mines each. After a reshuffle it is half of {percent}% of the empty squares, rounded
+            half up. Your marks are private, and you can add or remove them until you press Done.
           </li>
           <li>
-            A square both players marked is a big mine. It counts double in numbers and in the mine
-            count, and when it is triggered it blasts the 3x3 area around it.
+            If you press Done, or time runs out, with fewer than your number placed, the missing
+            mines are placed at random for you. You are told how many, never where. Your opponent is
+            told nothing. Online, both players place at the same time with a 20-second timer.
+            Locally there is no timer: White places, the device is handed over, then Black places.
           </li>
-          <li>There is no safe first move in this mode.</li>
+          <li>
+            Your opponent only ever sees whether you are still placing or ready. Once the round
+            ends, your own marks are hidden from you too.
+          </li>
+          <li>
+            A square both players marked is a big mine. It counts as 2 in every number and in the
+            mine count. Numbers count both players&apos; mines, so subtract your own to work out
+            your opponent&apos;s.
+          </li>
+          <li>
+            A single mine works as described above, whoever placed it, so you can hit your own. An
+            explosion never shows whose mine it was.
+          </li>
+          <li>
+            Any landing on a big mine blasts the 3x3 area around it (cut off at the board edge). The
+            blast destroys every non-king piece in the area, yours and your opponent&apos;s. Every
+            king in the area loses exactly 1 life and stays where it is. Every square in the area
+            becomes a crater and every mine in it is used up. There is no chain reaction.
+          </li>
+          <li>
+            If one blast takes the last life of both kings, the player who moved loses. Pieces
+            destroyed by a blast are not captures.
+          </li>
+          <li>
+            There is no safe first move in this mode. You can resign or offer a draw during
+            placement. When the game ends, the final layout is shown with who placed each mine and
+            which were big.
+          </li>
         </ul>
 
         <h3>Flags</h3>
@@ -231,10 +276,17 @@ export function RulesDialog({
             After {settings.reshuffleInterval} turns in a row without a capture (counting both
             players), all mines are reshuffled. The reshuffle countdown is always shown.
           </li>
-          <li>
-            The new mine count is {percent}% of the empty squares at that moment, rounded half up.
-            Mines can land on any empty square, on any rank.
-          </li>
+          {manual ? (
+            <li>
+              All mines are cleared and both players place new ones (see Manual mine mode above).
+              Until the new round ends there are no live mines.
+            </li>
+          ) : (
+            <li>
+              The new mine count is {percent}% of the empty squares at that moment, rounded half up.
+              Mines can land on any empty square, on any rank.
+            </li>
+          )}
           <li>All numbers are hidden again, and craters and flags are cleared.</li>
         </ul>
 
