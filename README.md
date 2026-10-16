@@ -23,7 +23,7 @@ pnpm --filter @chessweeper/web dev   # play local pass-and-play in the browser
 
 ## Play online with friends
 
-One command runs the server on your laptop and shares it through a free Cloudflare quick tunnel (no account, no cost): `pnpm play`. Steps and limits are in [`docs/PLAY_ONLINE.md`](docs/PLAY_ONLINE.md).
+One command runs the server on your laptop and shares it through a free public tunnel (Cloudflare, or SSH-based fallbacks for networks that block it; no account, no cost): `pnpm play`. Steps and limits are in [`docs/PLAY_ONLINE.md`](docs/PLAY_ONLINE.md).
 
 ## Deploying (later)
 
