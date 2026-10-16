@@ -1,4 +1,4 @@
-/* Pixel-art skin (M11). Sizes are "logical" px: the window is zoomed by a whole number. */
+/* Pixel-art skin (M11). Sizes are "logical" px: the window is zoomed in half steps. */
 :root {
   --px-black: #000000;
   --px-white: #ffffff;

@@ -8,7 +8,7 @@ export const WINDOW_W = 370;
 export const WINDOW_H = 446;
 /** Logical width of the stacked (phone) layout. */
 export const STACKED_W = 288;
-/** Largest whole-number zoom. */
+/** Largest zoom, in half steps. */
 export const MAX_ZOOM = 8;
 /** Below this viewport width the log stacks under the board. */
 export const STACK_BELOW = 640;
@@ -18,7 +18,7 @@ export interface Fit {
   stacked: boolean;
 }
 
-/** Whole-number zoom on desktop; fit-to-width (still pixel-crisp) on phones. */
+/** Half-step zoom (1, 1.5, 2, ...) on desktop; quarter-step fit-to-width on phones. */
 export function computeFit(width: number, height: number): Fit {
   if (width < STACK_BELOW) {
     return {
@@ -26,7 +26,7 @@ export function computeFit(width: number, height: number): Fit {
       stacked: true,
     };
   }
-  const zoom = Math.floor(Math.min(width / WINDOW_W, height / WINDOW_H));
+  const zoom = Math.floor(Math.min(width / WINDOW_W, height / WINDOW_H) * 2) / 2;
   return { zoom: Math.max(1, Math.min(MAX_ZOOM, zoom)), stacked: false };
 }
 
