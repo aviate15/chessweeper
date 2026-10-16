@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { CODE_ALPHABET } from "@chessweeper/protocol";
-import { startHarness, twoPlayers, TestClient, type Harness } from "./testkit";
+import { startHarness, twoPlayers, type Harness } from "./testkit";
 
 let h: Harness | null = null;
 afterEach(async () => {
@@ -25,8 +25,7 @@ async function upgradeStatus(
   headers?: Record<string, string>,
 ): Promise<string> {
   try {
-    const c = await hh.connect({ origin, ...(headers === undefined ? {} : { headers }) });
-    c;
+    await hh.connect({ origin, ...(headers === undefined ? {} : { headers }) });
     return "open";
   } catch (e) {
     return (e as Error).message;
@@ -65,8 +64,7 @@ describe("rooms and seats", () => {
 
   it("rejects an unknown room, a wrong token and a third player", async () => {
     const hh = await start();
-    const { a, ja } = await twoPlayers(hh);
-    a;
+    const { ja } = await twoPlayers(hh);
     const c = await hh.connect();
     c.send({ type: "join_room", code: "ZZZZZZ" });
     expect((await c.next("error")).code).toBe("room-not-found");
@@ -406,5 +404,3 @@ describe("hardening", () => {
     expect((await fetch(`${base}/anything`)).status).toBe(404);
   });
 });
-
-TestClient;
