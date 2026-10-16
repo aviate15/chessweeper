@@ -156,10 +156,14 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 6-turn full res
 
 ---
 
-## 6. UI/UX (to brainstorm together, nothing decided)
+## 6. UI/UX
 
-- Retro look: beveled gray panels, pixel art, LED counters, pixel typeface. Possible building blocks: 98.css for bevels, a 7-segment font for counters.
-- Topics: how numbers and pieces share a square; how flags are placed on desktop and mobile; what the LED counters show (flags left? mines left? turns until reshuffle?); explosion and king-life feedback; reshuffle animation; lobby and online flow.
+- `[D]` Authentic old-school Windows Minesweeper look, much more colourful: classic number colours (1 blue, 2 green, 3 red, 4 navy, 5 maroon, 6 teal, 7 black, 8 gray), clearly distinct white (ivory/gold) and black (charcoal/crimson) pieces, coloured LEDs. Pixel art for pieces, tiles, flags, mines, craters, explosions, smileys, buttons, dialog chrome, icons and LED digits. Sprites are authored as pixel maps and approved on the `/sprites` style tile (2026-10-16).
+- `[D]` Layout: board on the left, move log on the right, infographics bar on top (mines LED, smiley = new game, turns-until-reshuffle LED that blinks red at 2 left, lives per side as pixel king icons, captured and fallen rows). Fixed-size retro window, integer scaling, teal desktop.
+- `[D]` Pass-and-play: after the handoff the board flips to the side to move (default on, toggle in the Game menu). Online: own side at the bottom.
+- `[D]` Sound, generated in code with WebAudio (no asset files): move, capture, flag, reveal, explosion, king hit, check, reshuffle, game over, click. Mute toggle in the Game menu, persisted; audio starts only after the first user interaction.
+- `[D]` Animations: on a mine hit the explosion graphic and sound play first, then the handoff screen (about 800 ms at most, skippable by click or key; game state updates instantly; online play never blocks input). Also: piece slide, capture pop, number flip-reveal, reshuffle wave, king-life crack, check flash, game-over mine reveal. All respect reduced-motion.
+- `[Q]` Lobby and online flow (later milestone).
 
 ---
 
@@ -180,6 +184,7 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 6-turn full res
 
 ## 8. Change log
 
+- 2026-10-16: UI v2 decisions recorded in section 6 (retro skin, layout, board flip, sound, animations) after the style tile was approved.
 - 2026-10-16: Reshuffle interval lowered from 10 to 6 total turns (3 per player) after the first pass-and-play playtest; still a tunable config value (3.7).
 - 2026-10-16: Resign, draw agreement and abandonment are decided as non-move endings with their own reasons and a public log entry; draw offers lapse on the next move (3.6).
 - 2026-10-16: Client projection (M8). Added to the public information (3.2): lost pieces with cause, the public move log, in-check and the viewer's seat. The final mine layout is revealed to both players when the game ends, and only then (3.6). The projected view carries no half-move clock (there is no 50-move rule).
