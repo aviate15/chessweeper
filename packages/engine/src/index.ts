@@ -21,3 +21,5 @@ export * from "./mines/resolve";
 export * from "./view/types";
 export { toPublicView, projectEvents } from "./view/public";
 export { toGameOverView } from "./view/gameover";
+export * from "./view/client";
+export * from "./view/flags";
