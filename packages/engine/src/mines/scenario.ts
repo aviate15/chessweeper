@@ -52,6 +52,7 @@ export function gameFromScenario(scenario: Scenario): GameState {
       noCaptureCount: scenario.noCaptureCount ?? 0,
       status: scenario.status ?? { kind: "ongoing" },
       checkException: scenario.checkException ?? null,
+      log: [],
     },
     hidden: {
       mines,
