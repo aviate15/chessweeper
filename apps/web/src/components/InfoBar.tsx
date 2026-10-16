@@ -107,6 +107,8 @@ export interface InfoBarProps {
   onAcceptDraw: () => void;
   onDeclineDraw: () => void;
   pendingDraw: Color | null;
+  /** Online: false while my own offer is pending, so the answer buttons are hidden. */
+  canAnswerDraw?: boolean;
 }
 
 export function InfoBar(props: InfoBarProps) {
@@ -169,7 +171,12 @@ export function InfoBar(props: InfoBarProps) {
         >
           ?
         </button>
-        {pendingDraw !== null && !props.gameOver && (
+        {pendingDraw !== null && !props.gameOver && props.canAnswerDraw === false && (
+          <div className="draw-offer" role="status">
+            <span>Draw offered. Waiting for an answer...</span>
+          </div>
+        )}
+        {pendingDraw !== null && !props.gameOver && props.canAnswerDraw !== false && (
           <div className="draw-offer" role="alert">
             <span>
               {COLOR_NAME[pendingDraw]} offers a draw. {COLOR_NAME[opponent(pendingDraw)]}:

@@ -18,6 +18,12 @@ export interface MenuBarProps {
   onMoves: () => void;
   onOptions: () => void;
   onRules: () => void;
+  /** Online play: New game becomes Leave game, and Flip board and Options are disabled. */
+  online?: boolean;
+  /** False when this build has no server URL, so Online... is greyed out. */
+  onlineAvailable?: boolean;
+  onOnline?: () => void;
+  onLeave?: () => void;
 }
 
 function Item({
@@ -107,7 +113,19 @@ export function MenuBar(props: MenuBarProps) {
         {title("game", "Game")}
         {menu === "game" && (
           <div className="menu-drop" role="menu" aria-label="Game">
-            <Item onSelect={pick(props.onNewGame)}>New game</Item>
+            {props.online ? (
+              <Item onSelect={pick(props.onLeave ?? props.onNewGame)}>Leave game</Item>
+            ) : (
+              <>
+                <Item onSelect={pick(props.onNewGame)}>New game</Item>
+                <Item
+                  disabled={props.onlineAvailable === false || !props.onOnline}
+                  onSelect={pick(props.onOnline ?? props.onNewGame)}
+                >
+                  Online...
+                </Item>
+              </>
+            )}
             <Item disabled={props.gameOver} onSelect={pick(props.onResign)}>
               Resign
             </Item>
@@ -121,6 +139,7 @@ export function MenuBar(props: MenuBarProps) {
             <Item
               role="menuitemcheckbox"
               checked={props.flip}
+              disabled={props.online === true}
               icon={ICON_FLIP}
               onSelect={pick(props.onToggleFlip, false)}
             >
@@ -138,7 +157,9 @@ export function MenuBar(props: MenuBarProps) {
               Moves
             </Item>
             <div className="menu-sep" role="separator" />
-            <Item onSelect={pick(props.onOptions)}>Options...</Item>
+            <Item disabled={props.online === true} onSelect={pick(props.onOptions)}>
+              Options...
+            </Item>
           </div>
         )}
       </div>
