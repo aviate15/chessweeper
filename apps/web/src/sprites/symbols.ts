@@ -232,26 +232,27 @@ export const EXPLOSION_FRAMES: readonly Sprite[] = [
   ],
 ];
 
-const HEART: Sprite = [
+/** A tiny gold crown: one king life. */
+const CROWN: Sprite = [
   "................",
   "................",
-  "..KKKK....KKKK..",
-  ".KFFFFK..KFFFFK.",
-  "KFLFFFFKKFFFFFFK",
-  "KFLFFFFFFFFFFFFK",
-  "KFFFFFFFFFFFFFFK",
-  "KFFFFFFFFFFFFFFK",
-  ".KFFFFFFFFFFFFK.",
-  "..KFFFFFFFFFFK..",
-  "...KFFFFFFFFK...",
-  "....KFFFFFFK....",
-  ".....KFFFFK.....",
-  "......KFFK......",
-  ".......KK.......",
+  "................",
+  "..K....KK....K..",
+  ".KYK..KYYK..KYK.",
+  ".KYYK.KYYK.KYYK.",
+  ".KYYYKKYYKKYYYK.",
+  ".KYLYYYYYYYYYYK.",
+  ".KYLYYYYYYYYYyK.",
+  ".KYYYYFYYFYYYyK.",
+  ".KyYYYYYYYYYyyK.",
+  ".KyyyyyyyyyyyyK.",
+  ".KKKKKKKKKKKKKK.",
+  "................",
+  "................",
   "................",
 ];
 
-export const LIFE_FULL: Sprite = HEART;
+export const LIFE_FULL: Sprite = CROWN;
 const crack: Sprite = [
   "................",
   "................",
@@ -271,4 +272,7 @@ const crack: Sprite = [
   "................",
 ];
 /** Grey, with a crack: a spent king life. */
-export const LIFE_CRACKED: Sprite = overlay(recolor(HEART, { F: "D", L: "S" }), crack);
+export const LIFE_CRACKED: Sprite = overlay(
+  recolor(CROWN, { Y: "D", y: "Z", L: "S", F: "Z" }),
+  crack,
+);

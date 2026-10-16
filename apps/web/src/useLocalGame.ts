@@ -10,6 +10,7 @@ import {
   tryEndGame,
   tryResolveMove,
   type Color,
+  type EventView,
   type Flags,
   type GameOverView,
   type GameState,
@@ -38,6 +39,10 @@ interface Snapshot {
   readonly offers: OfferState;
   /** Set while the board is hidden for a pass-and-play handoff. */
   readonly handoffTo: Color | null;
+  /** Projected events of the latest move or ending (empty at game start). */
+  readonly lastEvents: readonly EventView[];
+  /** Increments per applied move, ending or new game. */
+  readonly turnId: number;
 }
 
 export interface LocalGame {
@@ -48,6 +53,8 @@ export interface LocalGame {
   readonly flags: Flags;
   readonly offers: OfferState;
   readonly handoffTo: Color | null;
+  readonly lastEvents: readonly EventView[];
+  readonly turnId: number;
   play: (move: Move) => SafeError | null;
   toggleFlag: (square: Square) => void;
   dismissHandoff: () => void;
@@ -63,7 +70,11 @@ export interface UseLocalGameOptions {
   readonly rng?: Rng;
 }
 
-function snapshotOf(state: GameState, previous: Snapshot | null): Snapshot {
+function snapshotOf(
+  state: GameState,
+  previous: Snapshot | null,
+  prevTurnId = previous?.turnId ?? -1,
+): Snapshot {
   const view = toPublicView(state, null);
   return {
     view,
@@ -71,6 +82,8 @@ function snapshotOf(state: GameState, previous: Snapshot | null): Snapshot {
     flags: previous?.flags ?? { w: noFlags(), b: noFlags() },
     offers: previous?.offers ?? initialOffers,
     handoffTo: null,
+    lastEvents: [],
+    turnId: prevTurnId + 1,
   };
 }
 
@@ -102,6 +115,7 @@ export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
           },
           offers: offersAfterMove(prev.offers, mover),
           handoffTo: handoffAfterMove(mover, next.view),
+          lastEvents: events,
         };
       });
       return null;
@@ -113,7 +127,12 @@ export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
     const result = tryEndGame(stateRef.current, { reason, by });
     if (!result.ok) return;
     stateRef.current = result.resolution.state;
-    setSnap((prev) => ({ ...snapshotOf(result.resolution.state, prev), handoffTo: null }));
+    const events = projectEvents(result.resolution.events);
+    setSnap((prev) => ({
+      ...snapshotOf(result.resolution.state, prev),
+      handoffTo: null,
+      lastEvents: events,
+    }));
   }, []);
 
   return {
@@ -122,6 +141,8 @@ export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
     flags: snap.flags[snap.view.turn],
     offers: snap.offers,
     handoffTo: snap.handoffTo,
+    lastEvents: snap.lastEvents,
+    turnId: snap.turnId,
     play,
     toggleFlag: (square) => {
       setSnap((prev) => {
@@ -146,7 +167,7 @@ export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
     },
     newGame: () => {
       stateRef.current = createGame({ rng });
-      setSnap(snapshotOf(stateRef.current, null));
+      setSnap((prev) => snapshotOf(stateRef.current, null, prev.turnId));
     },
   };
 }

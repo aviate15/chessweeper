@@ -1,5 +1,9 @@
 import { squareName, type GameOverView } from "@chessweeper/engine";
+import { playCue } from "../audio";
 import { REASON_TEXT, resultText } from "../narration";
+import { MINE } from "../sprites";
+import { Dialog } from "./Dialog";
+import { Px } from "./Px";
 
 export function GameOverDialog({
   gameOver,
@@ -13,21 +17,39 @@ export function GameOverDialog({
   const status = gameOver.view.status;
   if (status.kind !== "over") return null;
   return (
-    <div className="dialog" role="dialog" aria-label="Game over">
-      <h2 className="dialog-title">Game over</h2>
-      <p data-testid="gameover-result">{resultText(status.result)}</p>
-      <p data-testid="gameover-reason">By {REASON_TEXT[status.reason]}</p>
+    <Dialog title="Game over" label="Game over">
+      <div className="dialog-row">
+        <Px sprite={MINE} className="dialog-icon" />
+        <div>
+          <p data-testid="gameover-result">{resultText(status.result)}</p>
+          <p data-testid="gameover-reason">By {REASON_TEXT[status.reason]}</p>
+        </div>
+      </div>
       <p data-testid="gameover-mines">
         Mines ({gameOver.mines.length}): {gameOver.mines.map(squareName).join(", ") || "none"}
       </p>
       <div className="dialog-buttons">
-        <button type="button" onClick={onNewGame}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            playCue("click");
+            onNewGame();
+          }}
+        >
           New game
         </button>
-        <button type="button" onClick={onClose}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            playCue("click");
+            onClose();
+          }}
+        >
           View board
         </button>
       </div>
-    </div>
+    </Dialog>
   );
 }

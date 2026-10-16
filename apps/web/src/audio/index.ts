@@ -20,13 +20,9 @@ export function unlockAudio(): void {
   // no-op
 }
 
-export function playCue(cue: Cue): void {
-  cue;
-}
+export const playCue: (cue: Cue) => void = () => undefined;
 
-export function playCues(events: readonly EventView[]): void {
-  events;
-}
+export const playCues: (events: readonly EventView[]) => void = () => undefined;
 
 export function setMuted(b: boolean): void {
   muted = b;
