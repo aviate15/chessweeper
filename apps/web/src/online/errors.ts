@@ -12,6 +12,7 @@ export const FRIENDLY_ERRORS: Readonly<Record<ErrorCode, string>> = {
   "game-over": "The game is already over.",
   internal: "The server had a problem. Please try again.",
   forbidden: "That isn't allowed right now.",
+  "not-playing": "Mines are still being placed. Moves start when placement ends.",
 };
 
 const GENERIC = "Something went wrong. Please try again.";

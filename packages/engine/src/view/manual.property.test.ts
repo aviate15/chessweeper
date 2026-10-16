@@ -413,7 +413,7 @@ describe("manual mode: game over view (3.6, 3.10)", () => {
       by: "b",
     }).state;
     const over = toGameOverView(auto, null);
-    expect(over?.owned).toBeNull();
+    expect(over?.owned).toBeUndefined();
     expect(over?.mines).toEqual(sorted(auto.hidden.mines));
   });
 

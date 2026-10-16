@@ -138,7 +138,12 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
   }),
   z.strictObject({
     type: z.literal("game_over"),
-    over: z.strictObject({ view: publicView, mines: z.array(square) }),
+    over: z.strictObject({
+      view: publicView,
+      mines: z.array(square),
+      // Who placed each mine (Manual mine, 3.10); omitted in Auto. Sent only at game over.
+      owned: z.strictObject({ w: z.array(square), b: z.array(square) }).optional(),
+    }),
   }),
   z.strictObject({ type: z.literal("pong") }),
 ]);

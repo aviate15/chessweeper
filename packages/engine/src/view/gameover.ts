@@ -10,15 +10,16 @@ import type { GameOverView } from "./types";
  */
 export function toGameOverView(state: GameState, viewer: Color | null): GameOverView | null {
   if (state.public.status.kind !== "over") return null;
+  const view = toPublicView(state, viewer);
+  const mines = [...state.hidden.mines].sort((a, b) => a - b);
+  // Auto games omit `owned`, so their wire shape is unchanged (3.10).
+  if (state.hidden.owned == null) return { view, mines };
   return {
-    view: toPublicView(state, viewer),
-    mines: [...state.hidden.mines].sort((a, b) => a - b),
-    owned:
-      state.hidden.owned == null
-        ? null
-        : {
-            w: [...state.hidden.owned.w].sort((a, b) => a - b),
-            b: [...state.hidden.owned.b].sort((a, b) => a - b),
-          },
+    view,
+    mines,
+    owned: {
+      w: [...state.hidden.owned.w].sort((a, b) => a - b),
+      b: [...state.hidden.owned.b].sort((a, b) => a - b),
+    },
   };
 }
