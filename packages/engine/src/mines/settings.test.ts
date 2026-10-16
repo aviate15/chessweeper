@@ -1,4 +1,4 @@
-// 3.7 per-game settings: bounds, clamping and the config they produce.
+// 3.9 per-game settings: bounds, clamping and the config they produce.
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "./config";
 import {
@@ -26,6 +26,12 @@ describe("settings", () => {
       reshuffleInterval: 7,
       densityPercent: 35,
     });
+  });
+
+  // 3.9: density snaps to the nearest step of 5 (halves round up).
+  it("snaps the density to the nearest step", () => {
+    expect(clampSettings({ densityPercent: 32 }).densityPercent).toBe(30);
+    expect(clampSettings({ densityPercent: 37.5 }).densityPercent).toBe(40);
   });
 
   it("falls back to the defaults for missing or non-numeric values", () => {

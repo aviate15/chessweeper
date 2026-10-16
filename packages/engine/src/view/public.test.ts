@@ -239,7 +239,7 @@ describe("log in the view", () => {
   });
 });
 
-// 3.7: the game's settings are public information.
+// 3.9: the game's settings are public information.
 describe("toPublicView settings", () => {
   it("reports the interval and density the game runs with", () => {
     const game = gameFromScenario({

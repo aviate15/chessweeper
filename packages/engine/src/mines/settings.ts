@@ -1,7 +1,7 @@
 import { DEFAULT_CONFIG, type GameConfig } from "./config";
 
 /**
- * The two values a player picks per game (design doc 3.7): reshuffle interval and mine
+ * The two values a player picks per game (design doc 3.9): reshuffle interval and mine
  * density. Everything else in `GameConfig` stays at its default. Shared by the server (which
  * validates), the web client (which offers the choices) and the public view.
  */

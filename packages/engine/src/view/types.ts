@@ -76,7 +76,7 @@ export interface PublicView {
   readonly craters: readonly Square[];
   /** Live mines on the board: a public count, never positions (3.2). */
   readonly mineCount: number;
-  /** The settings this game runs with: public, so nobody is surprised by them (3.7). */
+  /** The settings this game runs with: public, so nobody is surprised by them (3.9). */
   readonly settings: GameSettings;
   /** Turns left before the next reshuffle (3.7). */
   readonly turnsUntilReshuffle: number;

@@ -22,6 +22,15 @@ describe("createGame", () => {
     }
   });
 
+  // 3.1: the default is 10 mines (30% of 32); the spread limit rarely leaves a game short.
+  it("reaches the full 10 mines in nearly every game", () => {
+    let full = 0;
+    for (let seed = 0; seed < 200; seed++) {
+      if (createGame({ rng: createSeededRng(seed) }).hidden.mines.size === 10) full += 1;
+    }
+    expect(full).toBeGreaterThanOrEqual(190);
+  });
+
   // 3.1: at most 2 mines in any 3x3 area.
   it("never puts more than 2 mines in a 3x3 area", () => {
     for (let seed = 0; seed < 200; seed++) {
