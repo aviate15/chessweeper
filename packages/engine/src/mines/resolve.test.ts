@@ -3,7 +3,7 @@ import { moveToUci } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
 import { parseSquare } from "../chess/square";
 import { gameFromScenario, type Scenario } from "./scenario";
-import { IllegalMoveError, NotYetSupportedError, resolveMove } from "./resolve";
+import { IllegalMoveError, resolveMove } from "./resolve";
 import type { GameState } from "./state";
 
 function sq(name: string): number {
@@ -173,7 +173,7 @@ describe("king edge cases", () => {
   });
 });
 
-describe("guard rails for later milestones", () => {
+describe("illegal moves", () => {
   const kingsOnly = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
 
   it("rejects moves that are not legal chess moves", () => {
@@ -181,24 +181,5 @@ describe("guard rails for later milestones", () => {
     const e2e4 = legalMoves(start.position).find((m) => moveToUci(m) === "e2e4");
     if (e2e4 === undefined) throw new Error("setup");
     expect(() => resolveMove(scenario({ fen: kingsOnly }), e2e4)).toThrow(IllegalMoveError);
-  });
-
-  it.each([
-    ["castling", "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", "e1g1"],
-    ["en passant", "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2", "e5d6"],
-    ["promotion", "4k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7a8q"],
-  ])("refuses %s until special moves on mines land in M6", (_name, fen, uci) => {
-    expect(() => play(scenario({ fen }), uci)).toThrow(NotYetSupportedError);
-  });
-
-  it("refuses an explosion that exposes the mover's king (check exception is M6)", () => {
-    // Bishop a1 blocks the rook's check by going to e5, which is mined.
-    const fen = "4r2k/8/8/8/8/8/8/B3K3 w - - 0 1";
-    expect(() => play(scenario({ fen, mines: ["e5"] }), "a1e5")).toThrow(NotYetSupportedError);
-  });
-
-  it("refuses to continue once a king has no lives (game end is M6)", () => {
-    const game = scenario({ fen: kingsOnly, lives: { w: 0, b: 3 } });
-    expect(() => play(game, "e1e2")).toThrow(NotYetSupportedError);
   });
 });

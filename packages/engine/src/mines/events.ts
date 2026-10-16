@@ -1,12 +1,12 @@
 import type { Move } from "../chess/move";
 import type { Color, Piece, PieceType, Square } from "../chess/types";
+import type { GameOverReason, GameResult } from "./state";
 
 /**
  * Structured record of what happened during a move: enough for UI narration, animations
  * and the Moves dialog. Public events only; nothing here reveals an unexploded mine.
  *
- * Reserved for later milestones: CheckExceptionTriggered (M6), GameOver (M6),
- * Reshuffled (M7) and the server-only MineRelocated (M7).
+ * Reserved for later milestones: Reshuffled (M7) and the server-only MineRelocated (M7).
  */
 export type GameEvent =
   | { readonly type: "MoveMade"; readonly color: Color; readonly move: Move }
@@ -23,5 +23,11 @@ export type GameEvent =
   | {
       readonly type: "NumbersChanged";
       readonly updates: readonly { readonly square: Square; readonly number: number }[];
+    }
+  | { readonly type: "CheckExceptionTriggered"; readonly color: Color }
+  | {
+      readonly type: "GameOver";
+      readonly result: GameResult;
+      readonly reason: GameOverReason;
     }
   | { readonly type: "TurnPassed"; readonly to: Color };

@@ -36,6 +36,8 @@ export function createGame({ rng, config = DEFAULT_CONFIG }: CreateGameOptions):
       craters: new Set(),
       lives: { w: config.kingLives, b: config.kingLives },
       noCaptureCount: 0,
+      status: { kind: "ongoing" },
+      checkException: null,
     },
     hidden: { mines: new Set(mines) },
     config,
