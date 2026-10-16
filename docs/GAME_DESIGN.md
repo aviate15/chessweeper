@@ -62,6 +62,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` Starting squares (ranks 1-2 and 7-8) start **hidden**. They are revealed only by a later landing.
 - `[D]` Only **landing** triggers mines or reveals; sliders passing over squares do nothing.
 - `[D]` Public meta-information: the **live mine count**, **turns until the next reshuffle**, and both kings' **lives**.
+- `[D]` Also public, all derived from public data: the **pieces each side has lost** (captured or killed by a mine, with the cause), the **public move log** (the public events of every move), whether the side to move is **in check**, and which **seat** a client's view is for.
 - `[D]` **No zero flood-fill**: landing on a square with a 0 reveals only that square, not its neighbors. Revisit after playtesting (could become a toggle).
 
 ### 3.3 Flags
@@ -103,6 +104,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` A king on 1 life follows normal chess rules. It may step onto any unrevealed square at its own risk.
 - `[D]` Stalemate is a draw, as in normal chess.
 - `[D]` Moves are **rejected once the game is over**.
+- `[D]` When the game ends, the **final mine layout is revealed to both players**. It is sent only after the game is over, never during play.
 - `[D]` Castling lands the king first, then the rook. If the king's landing ends the game (last life lost), nothing else resolves.
 - `[D]` **No other automatic draws**: no threefold repetition, no 50-move rule, no insufficient-material draw.
 - `[D]` Players can **resign** or **offer a draw** (the opponent accepts or declines).
@@ -176,6 +178,7 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 10-turn full re
 
 ## 8. Change log
 
+- 2026-10-16: Client projection (M8). Added to the public information (3.2): lost pieces with cause, the public move log, in-check and the viewer's seat. The final mine layout is revealed to both players when the game ends, and only then (3.6). The projected view carries no half-move clock (there is no 50-move rule).
 - 2026-10-16: Safe-start relocation never targets a revealed square or a crater square (3.1).
 - 2026-10-16: Safe-start relocation keeps every revealed number identical (new square touches the same revealed squares as the old one); widens to any rank, then drops the mine, if no square exists. The no-capture counter counts completed turns (a chain counts once), resets on any turn that captures a piece (including an en passant whose capturer explodes), and is frozen while a chain is pending or the game ends. `reshuffleInterval = 10` is a tunable config value. `MineRelocated` is a server-only event.
 

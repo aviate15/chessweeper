@@ -23,7 +23,8 @@ export function positionFromView(view: PublicView): Position {
       bQ: view.castling.bQ,
     },
     enPassant: view.enPassant,
-    halfmoveClock: view.halfmoveClock,
+    // No rule uses the half-move clock (3.6: no 50-move rule), so views do not carry it.
+    halfmoveClock: 0,
     fullmoveNumber: view.fullmoveNumber,
   };
 }

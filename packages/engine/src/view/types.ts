@@ -67,7 +67,6 @@ export interface PublicView {
   readonly turn: Color;
   readonly castling: CastlingRights;
   readonly enPassant: Square | null;
-  readonly halfmoveClock: number;
   readonly fullmoveNumber: number;
   readonly lives: Lives;
   /** Revealed squares with their live numbers, sorted by square (3.2). */

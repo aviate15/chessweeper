@@ -116,7 +116,6 @@ export function toPublicView(state: GameState, viewer: Color | null): PublicView
       bQ: state.position.castling.bQ,
     },
     enPassant: state.position.enPassant,
-    halfmoveClock: state.position.halfmoveClock,
     fullmoveNumber: state.position.fullmoveNumber,
     lives: { w: state.public.lives.w, b: state.public.lives.b },
     revealed: [...numbers.entries()]

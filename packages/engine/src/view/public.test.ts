@@ -20,7 +20,6 @@ const TOP_LEVEL_KEYS = [
   "enPassant",
   "fallen",
   "fullmoveNumber",
-  "halfmoveClock",
   "inCheck",
   "lives",
   "log",
@@ -121,6 +120,22 @@ describe("toPublicView", () => {
   it("reports turns until the reshuffle", () => {
     const game = gameFromScenario({ fen: START_FEN, noCaptureCount: 3 });
     expect(toPublicView(game, null).turnsUntilReshuffle).toBe(7);
+  });
+
+  // 3.7, 3.4: a check-exception chain is one turn, so the countdown stays frozen until it ends.
+  it("keeps the reshuffle countdown frozen during a check-exception chain", () => {
+    const game = gameFromScenario({
+      fen: "b3k3/8/8/8/8/8/8/4R2K b - - 0 1",
+      mines: ["e4"],
+      noCaptureCount: 3,
+    });
+    expect(toPublicView(game, null).turnsUntilReshuffle).toBe(7);
+    const chain = play(game, "a8e4").state;
+    expect(chain.public.checkException).toBe("b");
+    expect(toPublicView(chain, null).turnsUntilReshuffle).toBe(7);
+    const done = play(chain, "e8d8").state;
+    expect(done.public.checkException).toBeNull();
+    expect(toPublicView(done, null).turnsUntilReshuffle).toBe(6);
   });
 
   it("reports the viewer, turn and check", () => {
