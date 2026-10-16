@@ -55,7 +55,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` A revealed number = count of mines in the **8 adjacent squares**.
 - `[D]` Numbers are **live**: a revealed number always shows the current count of adjacent live mines, so it goes down when a neighboring mine is consumed.
 - `[D]` Numbers are **public**.
-- `[D]` **Reveal trigger**: a square's number is revealed when a piece lands on it and survives (normal Minesweeper style). This includes captures, both castling destinations, en passant and promotion.
+- `[D]` **Reveal trigger**: a square's number is revealed when a piece lands on it and survives (normal Minesweeper style). This includes captures, both castling destinations, en passant and promotion. It also applies to crater squares: when a piece survives a landing on a crater (including a king surviving the explosion that made it), the square's number is revealed and shown alongside the crater.
 - `[D]` A revealed number **stays visible until the next reshuffle**, even after the piece leaves the square.
 - `[D]` Starting squares (ranks 1-2 and 7-8) start **hidden**. They are revealed only by a later landing.
 - `[D]` Only **landing** triggers mines or reveals; sliders passing over squares do nothing.
@@ -77,6 +77,9 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` The follow-up move can itself hit another mine (any landing counts), so chain reactions are possible.
 - `[D]` The explosion and all its follow-up moves form **one turn** (one tick of the reshuffle counter).
 - `[D]` A triggered mine leaves a public **crater** on the square. The mine is consumed, so pieces can land on a crater safely afterwards.
+- `[D]` An exploded piece still counts as having moved: **castling rights are lost** whenever the king or a rook moves, even when the move ends in an explosion.
+- `[D]` A double-pushed pawn destroyed on a mine sets **no en passant target**.
+- `[D]` An en passant chance that stood before an explosion **still stands for the mover's follow-up move** (same turn, see check exception above).
 
 ### 3.5 Captures and special moves
 
@@ -168,6 +171,8 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 10-turn full re
 ---
 
 ## 8. Change log
+
+- 2026-10-16: Explosion side effects: castling rights are lost even if the king/rook move ends in an explosion; a double-pushed pawn destroyed on a mine sets no en passant target; an en passant chance still stands for the follow-up move. Craters reveal numbers like any other square when a piece survives a landing there.
 
 - 2026-10-16: Design-gap audit resolved. Safe start is now lazy relocation of the landed-on square's mine, to a free square on ranks 3-6 not next to a revealed square, first move only (the old "any first-move destination" wording was impossible). Numbers are live and persist until a reshuffle; starting squares start hidden; mine count, reshuffle countdown and lives are public. Explosion plus follow-ups = one turn; explosions count toward the counter; the reshuffle fires at the very end of a turn. Reshuffle clears craters, placement is uniform with no exclusions, rounding is half-up, and `mineDensity` (0.25) and `mineCap` (none) are tunable config. Special moves (3.5) confirmed. Castling-rook check exception applies but is unreachable. King death beats checkmate on the same move. No repetition, 50-move or insufficient-material draws; resign and draw offers in v1; no clocks; 60s disconnect grace. UI framework: Vite + React with DOM/CSS.
 - 2026-10-16: Flags are notes only. Exploded mines leave a public crater, safe to land on afterwards. Tech: pnpm monorepo, TypeScript, Node + `ws` on Fly.io. Tuning defaults added (tentative). Setup kit created.
