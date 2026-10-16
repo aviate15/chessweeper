@@ -183,12 +183,6 @@ describe("guard rails for later milestones", () => {
     expect(() => resolveMove(scenario({ fen: kingsOnly }), e2e4)).toThrow(IllegalMoveError);
   });
 
-  it("refuses an explosion that exposes the mover's king (check exception is M6)", () => {
-    // Bishop a1 blocks the rook's check by going to e5, which is mined.
-    const fen = "4r2k/8/8/8/8/8/8/B3K3 w - - 0 1";
-    expect(() => play(scenario({ fen, mines: ["e5"] }), "a1e5")).toThrow(NotYetSupportedError);
-  });
-
   it("refuses to continue once a king has no lives (game end is M6)", () => {
     const game = scenario({ fen: kingsOnly, lives: { w: 0, b: 3 } });
     expect(() => play(game, "e1e2")).toThrow(NotYetSupportedError);

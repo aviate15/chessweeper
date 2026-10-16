@@ -1,9 +1,9 @@
 import { applyMove } from "../chess/apply";
-import { isInCheck } from "../chess/attacks";
 import { castleRookSquares, type Move } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
-import type { Piece, Position } from "../chess/types";
+import type { Piece } from "../chess/types";
 import type { GameEvent } from "./events";
+import { finishTurn } from "./endturn";
 import { resolveLanding, type Working } from "./landing";
 import type { GameState } from "./state";
 
@@ -86,27 +86,18 @@ export function resolveMove(state: GameState, move: Move): Resolution {
     if (work.lives[mover] === 0) break;
   }
 
-  // 3.4: a destroyed piece wastes the move; a destroyed double-pushed pawn sets no en
-  // passant target.
-  const position: Position = {
-    ...moved,
-    board: work.board,
-    enPassant: destroyed ? null : moved.enPassant,
-  };
-  if (destroyed && isInCheck(position, mover)) {
-    throw new NotYetSupportedError("check exception after an explosion");
-  }
-
-  work.events.push({ type: "TurnPassed", to: position.turn });
+  const end = finishTurn({ before: state.position, moved, work, move: legal, mover, destroyed });
   return {
     state: {
       ...state,
-      position,
+      position: end.position,
       public: {
         ...state.public,
         revealed: work.revealed,
         craters: work.craters,
         lives: { w: work.lives.w, b: work.lives.b },
+        status: end.status,
+        checkException: end.checkException,
       },
       hidden: { mines: work.mines },
     },
