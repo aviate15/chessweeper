@@ -15,3 +15,5 @@ export * from "./mines/rng";
 export * from "./mines/config";
 export * from "./mines/state";
 export { createGame, type CreateGameOptions } from "./mines/setup";
+export * from "./mines/numbers";
+export * from "./mines/events";
