@@ -161,6 +161,21 @@ describe("safe start", () => {
       expect(w.events.map((e) => e.type)).toEqual(["MineRelocated", "NumbersChanged"]);
     });
 
+    // 3.1: a relocated mine never lands on a revealed square or a crater square.
+    it("never lands on a revealed or crater square", () => {
+      for (let seed = 0; seed < 60; seed++) {
+        const w = work([sq("a4")]);
+        for (const name of ["h1", "h2", "h3", "g3", "f3", "e3"]) w.revealed.add(sq(name));
+        for (const name of ["c6", "d6", "e6", "f6", "g6", "h6", "c1", "d1"])
+          w.craters.add(sq(name));
+        relocateSafeStartMine(w, sq("a4"), createSeededRng(seed));
+        const moved = w.events[0];
+        if (moved?.type !== "MineRelocated" || moved.to === null) throw new Error("dropped");
+        expect(w.revealed.has(moved.to)).toBe(false);
+        expect(w.craters.has(moved.to)).toBe(false);
+      }
+    });
+
     it("removes the mine when no free square exists at all", () => {
       const w = work([]);
       for (const s of emptySquares(w)) w.mines.add(s);

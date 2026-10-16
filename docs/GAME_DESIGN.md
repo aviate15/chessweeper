@@ -46,6 +46,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` **Safe start**: each player's first move of the game cannot hit a mine, like Minesweeper's safe first click.
 - `[D]` Safe start uses **lazy relocation**: only the square the first move actually lands on is protected. If it holds a mine, the server moves that mine before the landing resolves. Players never see the relocation. (Protecting every possible first-move destination is impossible: White's and Black's first moves together reach all 32 squares of ranks 3-6.)
 - `[D]` The relocated mine goes to a uniformly random free square (no piece, no mine, not the landing square) on ranks 3-6 that touches **exactly the same set of revealed squares as the old square**, so every revealed number stays identical. When the old square touches no revealed square, this means the new square is not adjacent to any revealed square.
+- `[D]` A relocated mine never lands on a revealed square or a crater square, so revealed squares stay safe and craters stay consumed.
 - `[D]` If no such square exists on ranks 3-6, the search widens to any free square on any rank (same condition). If still none, the mine is silently removed (one fewer mine until the next reshuffle). Revealed numbers next to it then update as usual (the one case where a safe-start change can show). The first move is always safe.
 - `[D]` Safe start applies only to each side's first move of the game, never after a reshuffle. A relocation is not a reshuffle and does not affect the reshuffle counter.
 - `[D]` Idle mines are **not part of this version** (parked, see section 5).
@@ -175,6 +176,7 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 10-turn full re
 
 ## 8. Change log
 
+- 2026-10-16: Safe-start relocation never targets a revealed square or a crater square (3.1).
 - 2026-10-16: Safe-start relocation keeps every revealed number identical (new square touches the same revealed squares as the old one); widens to any rank, then drops the mine, if no square exists. The no-capture counter counts completed turns (a chain counts once), resets on any turn that captures a piece (including an en passant whose capturer explodes), and is frozen while a chain is pending or the game ends. `reshuffleInterval = 10` is a tunable config value. `MineRelocated` is a server-only event.
 
 - 2026-10-16: Check-exception checkmate is decided: no resolving move after an explosion means checkmate and the mover loses. A chain of follow-up moves is one turn (fullmove advances once). Moves after game over are rejected. Castling resolves the king landing before the rook.
