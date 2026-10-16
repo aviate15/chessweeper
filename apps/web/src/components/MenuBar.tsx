@@ -16,6 +16,7 @@ export interface MenuBarProps {
   onToggleFlip: () => void;
   onToggleSound: () => void;
   onMoves: () => void;
+  onOptions: () => void;
 }
 
 function Item({
@@ -125,6 +126,8 @@ export function MenuBar(props: MenuBarProps) {
           <Item icon={ICON_MOVES} onSelect={pick(props.onMoves)}>
             Moves
           </Item>
+          <div className="menu-sep" role="separator" />
+          <Item onSelect={pick(props.onOptions)}>Options...</Item>
         </div>
       )}
     </nav>

@@ -37,7 +37,15 @@ import {
   type Fx,
   type Presentation,
 } from "./presentation";
-import { loadFlip, saveFlip } from "./settings";
+import { OptionsDialog } from "./components/OptionsDialog";
+import {
+  configFromOptions,
+  loadFlip,
+  loadOptions,
+  saveFlip,
+  saveOptions,
+  type GameOptions,
+} from "./settings";
 import { BUTTON_PRESSED, BUTTON_UP, CLOSE_BOX } from "./sprites";
 import { useFit } from "./useFit";
 import { useLocalGame } from "./useLocalGame";
@@ -60,7 +68,10 @@ export interface AppProps {
 }
 
 export function App({ rng, gate = true }: AppProps) {
-  const game = useLocalGame(rng ? { rng } : {});
+  const [options, setOptions] = useState<GameOptions>(loadOptions);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const config = useMemo(() => configFromOptions(options), [options]);
+  const game = useLocalGame(rng ? { rng, config } : { config });
   const { view, gameOver, turnId, lastEvents } = game;
   const [selected, setSelected] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
@@ -272,6 +283,9 @@ export function App({ rng, gate = true }: AppProps) {
             setMuted(!isMuted());
           }}
           onMoves={focusMoves}
+          onOptions={() => {
+            setOptionsOpen(true);
+          }}
         />
         <InfoBar
           view={view}
@@ -311,6 +325,18 @@ export function App({ rng, gate = true }: AppProps) {
             onPick={onPromote}
             onCancel={() => {
               setPromotion(null);
+            }}
+          />
+        )}
+        {optionsOpen && (
+          <OptionsDialog
+            options={options}
+            onSave={(next) => {
+              setOptions(next);
+              saveOptions(next);
+            }}
+            onClose={() => {
+              setOptionsOpen(false);
             }}
           />
         )}

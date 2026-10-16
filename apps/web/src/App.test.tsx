@@ -202,3 +202,43 @@ describe("App", () => {
     expect(screen.getByRole("region", { name: "Moves" })).toHaveFocus();
   });
 });
+
+describe("Game > Options", () => {
+  it("applies the saved interval and density at the next New game, not mid-game", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App rng={createSeededRng(5)} />);
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("8");
+    await playFirstMove(user, container);
+    await user.click(screen.getByRole("button", { name: "Ready" }));
+    await openGameMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Options..." }));
+    const dialog = screen.getByRole("dialog", { name: "Options" });
+    await user.selectOptions(screen.getByLabelText("Reshuffle every"), "5");
+    await user.selectOptions(screen.getByLabelText("Mine density"), "50");
+    expect(screen.getByTestId("options-mines")).toHaveTextContent("Starting mines: 16");
+    expect(dialog).toHaveTextContent("Applies at the next New game.");
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    // The running game is untouched.
+    expect(screen.getByTestId("mine-count")).toHaveTextContent("8");
+    expect(screen.getByTestId("reshuffle-count")).not.toHaveTextContent("5");
+    await openGameMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "New game" }));
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("5");
+    expect(screen.getByTestId("mine-count")).toHaveTextContent("16");
+    expect(localStorage.getItem("chessweeper.options")).toContain("50");
+  });
+
+  it("resets to defaults", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(
+      "chessweeper.options",
+      JSON.stringify({ reshuffleInterval: 3, densityPercent: 10 }),
+    );
+    render(<App rng={createSeededRng(5)} />);
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("3");
+    await openGameMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Options..." }));
+    await user.click(screen.getByRole("button", { name: "Reset to defaults" }));
+    expect(screen.getByTestId("options-mines")).toHaveTextContent("Starting mines: 8");
+  });
+});

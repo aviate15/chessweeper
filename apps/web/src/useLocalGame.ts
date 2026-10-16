@@ -13,6 +13,7 @@ import {
   type EventView,
   type Flags,
   type GameOverView,
+  type GameConfig,
   type GameState,
   type Move,
   type PublicView,
@@ -68,6 +69,8 @@ export interface LocalGame {
 export interface UseLocalGameOptions {
   /** Injectable for tests; production uses the cryptographic RNG. */
   readonly rng?: Rng;
+  /** Rules config for new games. Read at New game time; the running game is never changed. */
+  readonly config?: GameConfig;
 }
 
 function snapshotOf(
@@ -91,9 +94,11 @@ function snapshotOf(
 export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
   const [init] = useState(() => {
     const rng = options.rng ?? createCryptoRng();
-    return { rng, state: createGame({ rng }) };
+    return { rng, state: createGame(options.config ? { rng, config: options.config } : { rng }) };
   });
   const rng = init.rng;
+  const configRef = useRef(options.config);
+  configRef.current = options.config;
   const stateRef = useRef<GameState>(init.state);
   const [snap, setSnap] = useState<Snapshot>(() => snapshotOf(init.state, null));
 
@@ -166,7 +171,8 @@ export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
       setSnap((prev) => ({ ...prev, offers: declineDraw(prev.offers) }));
     },
     newGame: () => {
-      stateRef.current = createGame({ rng });
+      const config = configRef.current;
+      stateRef.current = createGame(config ? { rng, config } : { rng });
       setSnap((prev) => snapshotOf(stateRef.current, null, prev.turnId));
     },
   };

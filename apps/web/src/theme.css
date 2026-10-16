@@ -809,3 +809,27 @@ button {
     opacity: 0;
   }
 }
+
+/* ---- Options dialog ---- */
+.options-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.retro-select {
+  font: inherit;
+  font-size: 8px;
+  color: var(--px-black);
+  background: var(--px-white);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--sunken);
+  padding: 2px 3px;
+}
+
+.dialog-note {
+  color: var(--px-dark-gray);
+}
