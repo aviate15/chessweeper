@@ -4,6 +4,7 @@ import type { Color, Piece } from "../chess/types";
 import { opponent } from "../chess/types";
 import { isPublicEvent, type GameEvent, type PublicEvent } from "../mines/events";
 import { liveMineCount, revealedNumbers } from "../mines/numbers";
+import { settingsFromConfig } from "../mines/settings";
 import type { GameState, GameStatus } from "../mines/state";
 import type { EventView, FallenView, LogEntryView, MoveView, PieceView, PublicView } from "./types";
 
@@ -123,6 +124,7 @@ export function toPublicView(state: GameState, viewer: Color | null): PublicView
       .map(([square, number]) => ({ square, number })),
     craters: [...state.public.craters].sort((a, b) => a - b),
     mineCount: liveMineCount(state),
+    settings: settingsFromConfig(state.config),
     turnsUntilReshuffle: Math.max(0, state.config.reshuffleInterval - state.public.noCaptureCount),
     status: statusView(state.public.status),
     checkException: state.public.checkException,

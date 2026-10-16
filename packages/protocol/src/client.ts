@@ -1,3 +1,4 @@
+import { clampSettings } from "@chessweeper/engine";
 import { z } from "zod";
 
 /** Largest accepted frame, in characters. The server also caps the socket payload. */
@@ -20,8 +21,19 @@ const token = z
   .max(MAX_TOKEN_CHARS)
   .regex(/^[A-Za-z0-9_-]+$/);
 
+/**
+ * Per-game settings chosen by the creator (design doc 3.7). Integers only; out-of-range
+ * values are clamped to the allowed bounds, never rejected, so the server stays the authority.
+ */
+const settings = z
+  .strictObject({
+    reshuffleInterval: z.number().int().min(-1_000_000).max(1_000_000),
+    densityPercent: z.number().int().min(-1_000_000).max(1_000_000),
+  })
+  .transform((raw) => clampSettings(raw));
+
 export const clientMessageSchema = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("create_room") }),
+  z.strictObject({ type: z.literal("create_room"), settings: settings.optional() }),
   z.strictObject({ type: z.literal("join_room"), code, token: token.optional() }),
   z.strictObject({
     type: z.literal("move"),

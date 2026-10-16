@@ -97,7 +97,7 @@ button {
 
 .window {
   position: relative;
-  width: 370px;
+  width: 386px;
   padding: 3px;
   background: var(--px-silver);
   box-shadow: var(--raised);
@@ -506,7 +506,7 @@ button {
   flex-direction: column;
   gap: 3px;
   flex: none;
-  width: 88px;
+  width: 104px;
   height: calc(var(--square) * 8 + 8px);
 }
 
@@ -529,7 +529,9 @@ button {
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  padding: 3px 4px;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  padding: 0 4px 3px;
   background: var(--px-white);
   box-shadow: var(--sunken);
 }
@@ -542,7 +544,7 @@ button {
 .window-stacked .movelog {
   flex: none;
   width: 100%;
-  height: 80px;
+  height: 96px;
 }
 
 .movelog:focus-visible {
@@ -551,7 +553,11 @@ button {
 }
 
 .movelog-title {
-  margin: 0 0 3px;
+  position: sticky;
+  top: 0;
+  margin: 0 -4px 3px;
+  padding: 3px 4px 2px;
+  background: var(--px-white);
   font-size: 8px;
   font-weight: 700;
   text-transform: uppercase;
@@ -564,7 +570,12 @@ button {
 
 .moves-list {
   margin: 0;
-  padding-left: 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.move-no {
+  color: var(--px-gray);
 }
 
 .moves-list li {
@@ -576,9 +587,25 @@ button {
   margin-top: 2px;
   padding: 2px 4px;
   min-height: 14px;
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
   box-shadow:
     inset 1px 1px 0 var(--px-gray),
     inset -1px -1px 0 var(--px-white);
+}
+
+.status-fixed {
+  flex: none;
+  white-space: pre; /* keep the spaces around the separators inside the flex row */
+}
+
+/* Only the narration gives way on a long line; turn, settings and seat stay visible. */
+.status-narration {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-sep {

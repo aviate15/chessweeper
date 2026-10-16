@@ -1,6 +1,6 @@
 // Shared helpers for server tests. Not exported from the package index.
 import { WebSocket } from "ws";
-import { createSeededRng, type Rng } from "@chessweeper/engine";
+import { createSeededRng, type GameSettings, type Rng } from "@chessweeper/engine";
 import { serverMessageSchema, type ServerMessage } from "@chessweeper/protocol";
 import type { Clock } from "./clock";
 import { createLogger } from "./log";
@@ -207,8 +207,8 @@ export class TestClient {
     return this.queue.splice(0);
   }
 
-  async create(): Promise<Msg<"joined">> {
-    this.send({ type: "create_room" });
+  async create(settings?: GameSettings): Promise<Msg<"joined">> {
+    this.send({ type: "create_room", ...(settings === undefined ? {} : { settings }) });
     return this.next("joined");
   }
 
@@ -224,9 +224,9 @@ export class TestClient {
 }
 
 /** Opens two clients in one room: White created it, Black joined. */
-export async function twoPlayers(h: Harness) {
+export async function twoPlayers(h: Harness, settings?: GameSettings) {
   const a = await h.connect();
-  const ja = await a.create();
+  const ja = await a.create(settings);
   const b = await h.connect();
   const jb = await b.join(ja.code);
   await a.next("opponent", (m) => m.state === "connected");

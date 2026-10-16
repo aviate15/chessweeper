@@ -18,6 +18,7 @@ import { FakeSocket, FakeTimers } from "./online/testkit";
 
 const CODE = "ABCDEF";
 const TOKEN = "tok_en-123";
+const SETTINGS = { reshuffleInterval: 6, densityPercent: 30 };
 
 const start = createGame({ rng: createSeededRng(7) });
 const e4 = legalMoves(start.position).find((m) => m.from === 12 && m.to === 28);
@@ -74,7 +75,7 @@ function setup() {
     await user.type(screen.getByLabelText("Invite code"), "abc def");
     await user.click(screen.getByRole("button", { name: "Join game" }));
     open();
-    receive({ type: "joined", code: CODE, seat, token: TOKEN });
+    receive({ type: "joined", code: CODE, seat, token: TOKEN, settings: SETTINGS });
     receive({ type: "snapshot", seq: 0, view: toPublicView(start, seat) });
     receive({ type: "opponent", state: "connected" });
   };
@@ -82,7 +83,7 @@ function setup() {
     await openLobby();
     await user.click(screen.getByRole("button", { name: "Create game" }));
     open();
-    receive({ type: "joined", code: CODE, seat: "w", token: TOKEN });
+    receive({ type: "joined", code: CODE, seat: "w", token: TOKEN, settings: SETTINGS });
     receive({ type: "snapshot", seq: 0, view: toPublicView(start, "w") });
   };
   const menu = async (item: string) => {
@@ -156,7 +157,7 @@ describe("waiting room", () => {
     const t = setup();
     const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
     await t.create();
-    expect(t.socket().sent).toEqual([{ type: "create_room" }]);
+    expect(t.socket().sent).toEqual([{ type: "create_room", settings: SETTINGS }]);
     const room = screen.getByRole("dialog", { name: "Waiting room" });
     expect(within(room).getByTestId("invite-code")).toHaveTextContent(CODE);
     expect(within(room).getByText("Waiting for opponent...")).toBeInTheDocument();

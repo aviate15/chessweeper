@@ -1,23 +1,29 @@
 import { useState } from "react";
 import { playCue } from "../audio";
 import { isValidCode, normalizeCode } from "../online/code";
+import type { GameOptions } from "../settings";
 import { Dialog } from "./Dialog";
+import { SettingsFields } from "./SettingsFields";
 
 /** Game > Online...: create a game, or join one with a 6-character invite code. */
 export function LobbyDialog({
   initialCode = "",
+  settings: initialSettings,
   error,
   onCreate,
   onJoin,
   onClose,
 }: {
   initialCode?: string;
+  /** The settings the creator starts from (the last ones used). */
+  settings: GameOptions;
   error: string | null;
-  onCreate: () => void;
+  onCreate: (settings: GameOptions) => void;
   onJoin: (code: string) => void;
   onClose: () => void;
 }) {
   const [code, setCode] = useState(() => normalizeCode(initialCode));
+  const [settings, setSettings] = useState(initialSettings);
   const valid = isValidCode(code);
   return (
     <Dialog title="Online" label="Online" onClose={onClose}>
@@ -27,13 +33,14 @@ export function LobbyDialog({
         </p>
       )}
       <p>Start a new game and send the code to a friend:</p>
+      <SettingsFields settings={settings} onChange={setSettings} />
       <div className="dialog-buttons">
         <button
           type="button"
           className="btn"
           onClick={() => {
             playCue("click");
-            onCreate();
+            onCreate(settings);
           }}
         >
           Create game

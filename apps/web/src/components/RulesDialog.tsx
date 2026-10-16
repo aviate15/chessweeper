@@ -1,4 +1,9 @@
-import { mineCountFor, type GameConfig, type PieceView } from "@chessweeper/engine";
+import {
+  configFromSettings,
+  mineCountFor,
+  type GameSettings,
+  type PieceView,
+} from "@chessweeper/engine";
 import { useState, type ReactNode } from "react";
 import { playCue } from "../audio";
 import { Dialog } from "./Dialog";
@@ -66,15 +71,15 @@ function Example({ caption, children }: { caption: string; children: ReactNode }
 
 /** Rules page. Text is condensed from docs/GAME_DESIGN.md section 3 only. */
 export function RulesDialog({
-  config,
+  settings,
   onClose,
 }: {
-  config: GameConfig;
+  settings: GameSettings;
   onClose: (dontShowAgain: boolean) => void;
 }) {
   const [hide, setHide] = useState(false);
-  const startMines = mineCountFor(32, config);
-  const percent = Math.round(config.mineDensity * 100);
+  const startMines = mineCountFor(32, configFromSettings(settings));
+  const percent = settings.densityPercent;
   return (
     <Dialog
       title="How to play"
@@ -205,7 +210,7 @@ export function RulesDialog({
         <h3>The reshuffle</h3>
         <ul>
           <li>
-            After {config.reshuffleInterval} turns in a row without a capture (counting both
+            After {settings.reshuffleInterval} turns in a row without a capture (counting both
             players), all mines are reshuffled. The reshuffle countdown is always shown.
           </li>
           <li>

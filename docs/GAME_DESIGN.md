@@ -4,7 +4,7 @@ This file is the single source of truth for game rules. Claude Code must not inv
 
 **Status key:** `[D]` decided · `[T]` tentative (assumed, needs confirmation) · `[Q]` open question · `[I]` idea / parked
 
-Last updated: 2026-10-16
+Last updated: 2026-10-17
 
 ---
 
@@ -17,7 +17,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - **Tension and progress for both sides.** Danger is shared; nobody gets a free ride.
 - **Guessing and deduction, not chaos.** Mines are sparse: enough to keep players guessing.
 - **Minesweeper skill is tested.** Numbers are public, flags are private.
-- **Danger never runs out.** Concern: if the mines in ranks 3-6 get exhausted, the game becomes plain chess. The full reset every 8 turns keeps danger alive and keeps covering new positions as the game moves on.
+- **Danger never runs out.** Concern: if the mines in ranks 3-6 get exhausted, the game becomes plain chess. The full reset every few turns (6 by default) keeps danger alive and keeps covering new positions as the game moves on.
 - **The game keeps moving.** The reshuffle doubles as an anti-stall mechanism.
 - **King placement is strategic.** Mined escape squares make king safety a real decision.
 - **Rules are experimental.** Expect to tune after playtesting ("we can change as we experiment").
@@ -42,7 +42,8 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` Standard chess board and pieces, plus hidden mines.
 - `[D]` Mines are **sparse**: just enough to keep players guessing.
 - `[D]` At the start, mines sit on ranks 3-6 only, on a sparse subset of squares. A mine is never under a piece. Ranks 1-2 and 7-8 start with no mines.
-- `[T]` Starting count: `mineDensity` × 32 squares of ranks 3-6, using the same rounding and cap as 3.7. With the default `mineDensity = 0.25` that is **8 mines**.
+- `[D]` Starting count: `mineDensity` × 32 squares of ranks 3-6, using the same rounding and cap as 3.7. With the default `mineDensity = 0.30` that is **10 mines**.
+- `[D]` **Spread limit** (2026-10-17, chosen after a seeded simulation of the real engine): placement is random, but **no 3x3 area of the board holds more than 2 mines**. This removes 4-mine clusters, empty halves and lopsided starts, and caps any revealed number at 4. If the limit leaves no room for the full count, fewer mines are placed (the live mine count shows the real number). The limit applies to the starting placement and to every reshuffle (3.7). It does **not** apply to a safe-start relocation (below), which has to keep every revealed number identical; a relocated mine can therefore sit in a 3x3 area that already holds 2.
 - `[D]` **Safe start**: each player's first move of the game cannot hit a mine, like Minesweeper's safe first click.
 - `[D]` Safe start uses **lazy relocation**: only the square the first move actually lands on is protected. If it holds a mine, the server moves that mine before the landing resolves. Players never see the relocation. (Protecting every possible first-move destination is impossible: White's and Black's first moves together reach all 32 squares of ranks 3-6.)
 - `[D]` The relocated mine goes to a uniformly random free square (no piece, no mine, not the landing square) on ranks 3-6 that touches **exactly the same set of revealed squares as the old square**, so every revealed number stays identical. When the old square touches no revealed square, this means the new square is not adjacent to any revealed square.
@@ -115,12 +116,12 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 
 ### 3.7 Reshuffle (full reset, anti-stall)
 
-- `[D]` Every **8 total turns** (4 per player) without a capture, all mines are randomly reshuffled. This keeps the game moving. It replaces the original idea ("a mine flagged for more than 5 moves triggers a random reset"). Starting value, tunable after playtesting.
+- `[D]` Every **N total turns** (N = `reshuffleInterval`, default **6**: 3 per player) without a capture, all mines are randomly reshuffled. This keeps the game moving. It replaces the original idea ("a mine flagged for more than 5 moves triggers a random reset"). N is chosen per game (3.9).
 - `[D]` The counter starts at 0 at game start and resets to 0 after each reshuffle. It counts completed turns; a check-exception chain counts as one turn. Any turn in which a piece is captured resets it to 0, including an en passant capture whose capturer then explodes. A turn with an explosion counts as a normal turn and does not reset it. The counter does not change while a chain is pending or on the turn that ends the game.
 - `[D]` **Timing**: the reshuffle fires at the very end of a turn, after the whole check-exception chain and the game-end checks, and only if the game continues.
-- `[D]` Placement is **truly random**: uniform over all unoccupied squares, with no exclusions (not even near kings). Never on an occupied square. Mines may land on empty squares on ranks 1-2 and 7-8.
+- `[D]` Placement is **random** over all unoccupied squares, with no exclusions (not even near kings), except the **spread limit** of 3.1: at most 2 mines in any 3x3 area, so fewer mines are placed when the limit leaves no room (more likely in dense endgames; `Reshuffled` and the live mine count report what was actually placed). Never on an occupied square. Mines may land on empty squares on ranks 1-2 and 7-8.
 - `[D]` After a reshuffle the mine count is **`mineDensity` × the free (unoccupied) squares at that moment**, rounded **half-up** (e.g. 7.5 → 8), then capped at `mineCap` if one is set. It grows denser as pieces leave the board, matching "mines everywhere in the endgame". Not just the survivors from before.
-- `[T]` Tunable config values: `mineDensity = 0.25`, `mineCap = none`, `reshuffleInterval = 8` (one named setting, `DEFAULT_RESHUFFLE_INTERVAL`, so per-mode values can be added later). Add a cap if endgames get too brutal.
+- `[T]` Tunable config values: `mineDensity = 0.30` (`DEFAULT_MINE_DENSITY`), `mineCap = none`, `reshuffleInterval = 6` (`DEFAULT_RESHUFFLE_INTERVAL`). Density and interval are chosen per game within bounds (3.9). Add a cap if endgames get too brutal.
 - `[D]` A reshuffle **re-hides all revealed numbers**, **clears all craters** (mines moved, so old craters would be stale) and **clears all private flags**.
 
 ### 3.8 Turn resolution (derived from the rules above)
@@ -132,14 +133,22 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 5. If a king reaches 0 lives, the game ends and that side loses (3.6 precedence).
 6. If an explosion left the mover's own king in check, the same side moves again (3.4). This is still the same turn: go back to step 1. No resolving move = checkmate.
 7. Otherwise the turn passes. Check, checkmate and stalemate are evaluated for the opponent.
-8. End of turn, only if the turn passed and the game continues: the no-capture counter updates (a capture resets it). At `reshuffleInterval` (8) turns a reshuffle fires and the counter resets. Events: `Reshuffled` is public; `MineRelocated` (safe start) is server-only and never sent to clients.
+8. End of turn, only if the turn passed and the game continues: the no-capture counter updates (a capture resets it). At `reshuffleInterval` (default 6) turns a reshuffle fires and the counter resets. Events: `Reshuffled` is public; `MineRelocated` (safe start) is server-only and never sent to clients.
+
+### 3.9 Per-game settings (2026-10-17)
+
+- `[D]` Two values are chosen **per game**: the reshuffle interval (3.7) and the mine density (3.1, 3.7). Everything else (king lives, mine cap) stays at its default.
+- `[D]` Bounds: interval **2-20** turns in steps of 1; density **5-50%** in steps of 5. Defaults: **6** turns and **30%**.
+- `[D]` Online, the **creator** chooses them in the Create game dialog. The **server validates**: integers only, out-of-range values are clamped to the bounds (density is snapped to a step of 5), and a missing choice means the defaults. The server stays the authority.
+- `[D]` The settings are **public**. Both players see them in the waiting room, in the status bar and in the Rules page text, so nobody is surprised.
+- `[D]` Local pass-and-play chooses them in Game → New game... (section 6). They apply to the new game only, never to a running one.
 
 ---
 
 ## 4. Open questions (priority order)
 
 1. `[Q]` UI/UX brainstorm (section 6).
-2. `[T]` Tuning in playtesting: `mineDensity`, `mineCap`, the reshuffle interval (8 turns), the 3 king lives.
+2. `[T]` Tuning in playtesting: `mineDensity`, `mineCap`, the reshuffle interval (6 turns), the 3 king lives, the 2-per-3x3 spread limit.
 
 ---
 
@@ -163,11 +172,11 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 8-turn full res
 - `[D]` Pass-and-play: after the handoff the board flips to the side to move (default on, toggle in the Game menu). Online: own side at the bottom.
 - `[D]` Sound, generated in code with WebAudio (no asset files): move, capture, flag, reveal, explosion, king hit, check, reshuffle, game over, click. Mute toggle in the Game menu, persisted; audio starts only after the first user interaction.
 - `[D]` Animations: on a mine hit the explosion graphic and sound play first, then the handoff screen (about 800 ms at most, skippable by click or key; game state updates instantly; online play never blocks input). Also: piece slide, capture pop, number flip-reveal, reshuffle wave, king-life crack, check flash, game-over mine reveal. All respect reduced-motion.
-- `[D]` Game → Options (local play): reshuffle interval and mine density, applied at New game, so tuning needs no code change. Defaults come from the config (8 turns, 0.25).
+- `[D]` Game → **New game...** (local play, 2026-10-17) opens a dialog with the two per-game settings (3.9), pre-filled with the last ones used, with OK, Cancel and Reset to defaults. The smiley restarts at once with the last-used settings. This replaces Game → Options.
 - `[D]` Rules page: shown on first load ("Don't show again" saved locally), reachable from a Help menu or "?" button; written from this document only. Numbers show a tooltip (what they count, which piece's landing revealed them) and a corner-badge legend.
 - `[D]` Online flow (2026-10-16). The app opens on local pass-and-play. **Game → Online...** opens a Win 3.1-style Lobby dialog with "Create game" and "Join game" (6-character invite code, input uppercased and stripped of spaces).
   - Creating shows a waiting room: the code, "Copy code" and "Copy link" (`?join=CODE` opens the Lobby with the code filled in), "Waiting for opponent..." and Cancel. Cancel is client-only (the socket closes and the seat token is forgotten; the server drops the empty room later).
-  - Online play reuses the board, animations, sounds, status bar, move log and rules page. The board is fixed to the player's own colour at the bottom: no flipping and no handoff screen. Flip board and Options are disabled online (the server uses the default config).
+  - Online play reuses the board, animations, sounds, status bar, move log and rules page. The board is fixed to the player's own colour at the bottom: no flipping and no handoff screen. Flip board is disabled online. The creator picks the settings in the Create game dialog (3.9); the server validates them.
   - The client renders only from the server's public view and projected events. The final mine layout arrives with game over and is shown then.
   - Flags stay private in the browser (localStorage, per game and seat) and are cleared on a reshuffle, including one missed while disconnected.
   - Reconnect: the seat token is stored per game. On reload or a dropped socket the client rejoins with the token and applies the snapshot, showing a "Reconnecting..." banner meanwhile. An "Opponent disconnected" notice shows while the other side is away; after the 60-second grace (3.6) it offers "Claim win".
@@ -194,6 +203,7 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 8-turn full res
 
 ## 8. Change log
 
+- 2026-10-17: Playtest 3. Reshuffle interval default is now 6 and mine density default 30% (10 starting mines), chosen with a seeded simulation of the real engine (`pnpm --filter @chessweeper/engine sim`): at most 2 mines in any 3x3 area, for the start and for reshuffles, not for safe-start relocation (3.1, 3.7). Interval and density are chosen per game (3.9): Create game online, New game... locally; the server clamps them; both players see them in the waiting room, status bar and Rules page. Game → Options removed (section 6).
 - 2026-10-16: `pnpm play` falls back across tunnel services (cloudflared, Pinggy, localhost.run, ngrok) because some networks block Cloudflare's port. Hosting only, no rule changes.
 
 - 2026-10-16: Hosting for now is the laptop plus a free Cloudflare quick tunnel (`pnpm play`); Fly.io and Vercel are kept for later. Single URL: the server serves the built web app and the WebSocket (`/ws`). No rule changes.

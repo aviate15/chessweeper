@@ -6,6 +6,7 @@ import {
   type EventView,
   type Flags,
   type GameOverView,
+  type GameSettings,
   type Move,
   type PublicView,
   type Square,
@@ -39,6 +40,8 @@ export interface OnlineNotice {
 interface State {
   readonly active: boolean;
   readonly code: string | null;
+  /** The game's settings, known from `joined` (before the first snapshot). */
+  readonly settings: GameSettings | null;
   readonly seat: Color | null;
   readonly view: PublicView | null;
   readonly gameOver: GameOverView | null;
@@ -64,6 +67,7 @@ interface State {
 const initial: State = {
   active: false,
   code: null,
+  settings: null,
   seat: null,
   view: null,
   gameOver: null,
@@ -89,6 +93,7 @@ type Action =
       readonly t: "joined";
       readonly code: string;
       readonly seat: Color;
+      readonly settings: GameSettings;
       readonly stored: { readonly flags: Flags; readonly logLength: number } | null;
     }
   | { readonly t: "client"; readonly event: ClientEvent }
@@ -164,6 +169,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         code: action.code,
+        settings: action.settings,
         seat: action.seat,
         flags: action.stored?.flags ?? noFlags(),
         flagsLogLength: action.stored?.logLength ?? null,
@@ -193,6 +199,7 @@ export interface OnlineGame {
   readonly phase: OnlinePhase;
   readonly seat: Color | null;
   readonly code: string | null;
+  readonly settings: GameSettings | null;
   readonly view: PublicView | null;
   readonly gameOver: GameOverView | null;
   readonly flags: Flags;
@@ -208,7 +215,7 @@ export interface OnlineGame {
   readonly error: OnlineNotice | null;
   readonly fatal: FatalReason | null;
   readonly lobbyError: string | null;
-  create: () => void;
+  create: (settings?: GameSettings) => void;
   join: (code: string) => void;
   /** Forgets the game and returns to the lobby. */
   leave: () => void;
@@ -267,6 +274,7 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
             t: "joined",
             code: event.code,
             seat: event.seat,
+            settings: event.settings,
             stored: stored && { flags: new Set(stored.squares), logLength: stored.logLength },
           });
           return;
@@ -304,11 +312,14 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
     [attach, createClient],
   );
 
-  const create = useCallback(() => {
-    begin((client) => {
-      client.create();
-    }, null);
-  }, [begin]);
+  const create = useCallback(
+    (settings?: GameSettings) => {
+      begin((client) => {
+        client.create(settings);
+      }, null);
+    },
+    [begin],
+  );
 
   const join = useCallback(
     (code: string) => {
@@ -406,6 +417,7 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
     phase,
     seat: state.seat,
     code: state.code,
+    settings: state.settings,
     view: state.view,
     gameOver: state.gameOver,
     flags: state.flags,

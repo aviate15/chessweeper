@@ -11,7 +11,7 @@ Status: [I] parked until auto mode has shipped online. Decided in design chat, 2
 Modes: "Auto mine" (the current game) and "Manual mine".
 Manual mine: players place mines for the opponent instead of random placement. Same rules otherwise.
 
-- Total mines = 25% of the free (unoccupied) squares, split evenly: 12.5% each (about 4 each at game start, which matches the 8 total of auto mode).
+- Total mines = 25% (the game now defaults to 30%) of the free (unoccupied) squares, split evenly: 12.5% each (about 4 each at game start, which matches the 8 total of auto mode).
 - Each player places at most one mine per square, on any empty square.
 - Both players placing on the same square creates a stacked "big mine".
 - Placement happens at game start and again at every reshuffle (the board reset: all live mines are cleared and both players place anew).

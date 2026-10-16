@@ -9,9 +9,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "perft:deep": "vitest run --config vitest.deep.config.ts"
+    "perft:deep": "vitest run --config vitest.deep.config.ts",
+    "sim": "tsx scripts/sim.ts"
   },
   "devDependencies": {
-    "fast-check": "^4.10.2"
+    "fast-check": "^4.10.2",
+    "tsx": "^4.23.15"
   }
 }

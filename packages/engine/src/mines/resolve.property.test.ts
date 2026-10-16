@@ -11,6 +11,7 @@ import { legalMoves } from "../chess/movegen";
 import { parseFen } from "../chess/fen";
 import { fileOf, rankOf, squareName } from "../chess/square";
 import { DEFAULT_CONFIG, mineCountFor } from "./config";
+import { maxMinesIn3x3 } from "./test-utils";
 import { revealedNumbers } from "./numbers";
 import { GameOverError, resolveMove } from "./resolve";
 import { createSeededRng, pickDistinct, type Rng } from "./rng";
@@ -156,7 +157,9 @@ function playRandomly(start: GameState, choices: readonly number[], tally: Tally
     if (reshuffle?.type === "Reshuffled") {
       tally.reshuffles += 1;
       const free = state.position.board.filter((piece) => piece === null).length;
-      expect(state.hidden.mines.size).toBe(mineCountFor(free, state.config));
+      // 3.7: up to the configured count; the 3x3 limit can leave some out.
+      expect(state.hidden.mines.size).toBeLessThanOrEqual(mineCountFor(free, state.config));
+      expect(maxMinesIn3x3(state.hidden.mines)).toBeLessThanOrEqual(2);
       expect(reshuffle.mineCount).toBe(state.hidden.mines.size);
       expect(state.public.craters.size).toBe(0);
       expect(state.public.revealed.size).toBe(0);

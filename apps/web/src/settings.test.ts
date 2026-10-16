@@ -39,8 +39,8 @@ describe("flip setting", () => {
 
 describe("game options", () => {
   it("defaults to the engine defaults", () => {
-    expect(loadOptions()).toEqual({ reshuffleInterval: 8, densityPercent: 25 });
-    expect(configFromOptions(DEFAULT_OPTIONS).mineDensity).toBe(0.25);
+    expect(loadOptions()).toEqual({ reshuffleInterval: 6, densityPercent: 30 });
+    expect(configFromOptions(DEFAULT_OPTIONS).mineDensity).toBe(0.3);
   });
 
   it("round-trips through storage", () => {

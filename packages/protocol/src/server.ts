@@ -1,4 +1,4 @@
-import type { EventView, GameOverView, PublicView } from "@chessweeper/engine";
+import type { EventView, GameOverView, GameSettings, PublicView } from "@chessweeper/engine";
 import { z } from "zod";
 import { CODE_ALPHABET, CODE_LENGTH, MAX_TOKEN_CHARS } from "./client";
 import { ERROR_CODES, type ErrorCode } from "./errors";
@@ -10,6 +10,7 @@ export type ServerMessage =
       readonly code: string;
       readonly seat: "w" | "b";
       readonly token: string;
+      readonly settings: GameSettings;
     }
   | { readonly type: "snapshot"; readonly seq: number; readonly view: PublicView }
   | {
@@ -68,6 +69,11 @@ const eventView = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("Reshuffled"), mineCount: count }),
 ]);
 
+const settings = z.strictObject({
+  reshuffleInterval: z.number().int().min(1),
+  densityPercent: z.number().int().min(0).max(100),
+});
+
 const fallen = z.array(z.strictObject({ piece: pieceType, cause: z.enum(["capture", "mine"]) }));
 
 const publicView = z.strictObject({
@@ -86,6 +92,7 @@ const publicView = z.strictObject({
   revealed: z.array(numberView),
   craters: z.array(square),
   mineCount: count,
+  settings,
   turnsUntilReshuffle: count,
   status: z.discriminatedUnion("kind", [
     z.strictObject({ kind: z.literal("ongoing") }),
@@ -110,6 +117,7 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
       .regex(new RegExp(`^[${CODE_ALPHABET}]+$`)),
     seat: color,
     token: z.string().min(1).max(MAX_TOKEN_CHARS),
+    settings,
   }),
   z.strictObject({ type: z.literal("snapshot"), seq: count, view: publicView }),
   z.strictObject({

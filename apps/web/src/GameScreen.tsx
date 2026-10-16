@@ -5,7 +5,6 @@ import {
   legalMovesFromView,
   noFlags,
   type Color,
-  type GameConfig,
   type Move,
   type PromotionPiece,
   type Square,
@@ -43,9 +42,15 @@ import {
   type Fx,
   type Presentation,
 } from "./presentation";
-import { OptionsDialog } from "./components/OptionsDialog";
+import { NewGameDialog } from "./components/NewGameDialog";
 import { RulesDialog } from "./components/RulesDialog";
-import { loadFlip, saveFlip, saveRulesHidden, type GameOptions } from "./settings";
+import {
+  configFromOptions,
+  loadFlip,
+  saveFlip,
+  saveRulesHidden,
+  type GameOptions,
+} from "./settings";
 import { BUTTON_PRESSED, BUTTON_UP, CLOSE_BOX } from "./sprites";
 import { useFit } from "./useFit";
 
@@ -65,11 +70,11 @@ export interface GameScreenProps {
    * explosion has played (or the player clicks or presses a key). Online never blocks.
    */
   gate: boolean;
-  config: GameConfig;
+  /** The settings last used, offered again in New game (3.7). */
   options: GameOptions;
   onSaveOptions: (options: GameOptions) => void;
-  optionsOpen: boolean;
-  onOptionsOpen: (open: boolean) => void;
+  newGameOpen: boolean;
+  onNewGameOpen: (open: boolean) => void;
   rulesOpen: boolean;
   onRulesOpen: (open: boolean) => void;
   onlineAvailable: boolean;
@@ -84,11 +89,10 @@ export function GameScreen({
   ctl,
   online,
   gate,
-  config,
   options,
   onSaveOptions,
-  optionsOpen,
-  onOptionsOpen,
+  newGameOpen,
+  onNewGameOpen,
   rulesOpen,
   onRulesOpen,
   onlineAvailable,
@@ -284,12 +288,26 @@ export function GameScreen({
     else onLeaveOnline();
   };
 
+  /** The smiley and the game-over dialog: a fresh game with the last settings (local), or leave. */
   const newGame = () => {
     if (isOnline) {
       requestLeave();
       return;
     }
     game.newGame();
+    resetLocal();
+  };
+
+  /** Game > New game...: online it leaves the game, locally it asks for the settings. */
+  const openNewGame = () => {
+    if (isOnline) requestLeave();
+    else onNewGameOpen(true);
+  };
+
+  const startWithSettings = (settings: GameOptions) => {
+    onSaveOptions(settings);
+    onNewGameOpen(false);
+    game.newGame(configFromOptions(settings));
     resetLocal();
   };
 
@@ -376,7 +394,7 @@ export function GameScreen({
           canOfferDraw={game.canOfferDraw}
           flip={flip}
           soundOn={soundOn}
-          onNewGame={newGame}
+          onNewGame={openNewGame}
           onResign={ask("resign", game.resign)}
           onOfferDraw={ask("offerDraw", game.offerDraw)}
           onToggleFlip={toggleFlip}
@@ -384,9 +402,6 @@ export function GameScreen({
             setMuted(!isMuted());
           }}
           onMoves={focusMoves}
-          onOptions={() => {
-            onOptionsOpen(true);
-          }}
           onRules={openRules}
           online={isOnline}
           onlineAvailable={onlineAvailable}
@@ -453,24 +468,24 @@ export function GameScreen({
         )}
         {rulesOpen && (
           <RulesDialog
-            config={config}
+            settings={view.settings}
             onClose={(dontShowAgain) => {
               if (dontShowAgain) saveRulesHidden(true);
               onRulesOpen(false);
             }}
           />
         )}
-        {optionsOpen && (
-          <OptionsDialog
-            options={options}
-            onSave={onSaveOptions}
+        {newGameOpen && !isOnline && (
+          <NewGameDialog
+            settings={options}
+            onStart={startWithSettings}
             onClose={() => {
-              onOptionsOpen(false);
+              onNewGameOpen(false);
             }}
           />
         )}
         {phase0 === "waiting" && online?.code != null && (
-          <WaitingRoom code={online.code} onCancel={onLeaveOnline} />
+          <WaitingRoom code={online.code} settings={online.settings} onCancel={onLeaveOnline} />
         )}
         {confirm !== null && (
           <ConfirmDialog

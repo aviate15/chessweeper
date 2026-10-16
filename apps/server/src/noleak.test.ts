@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  configFromSettings,
   createGame,
+  DEFAULT_SETTINGS,
   createSeededRng,
   legalMoves,
   resolveMove,
+  type GameSettings,
   type GameState,
 } from "@chessweeper/engine";
 import { startHarness, twoPlayers, type Harness } from "./testkit";
@@ -28,10 +31,10 @@ interface Plan {
 }
 
 /** Plays non-capturing random moves with the engine directly, tracking what happened. */
-function simulate(seed: number, plies: number): Plan {
+function simulate(seed: number, plies: number, settings: GameSettings): Plan {
   const rng = createSeededRng(seed);
   const chooser = createSeededRng(seed + 100_000);
-  let state = createGame({ rng });
+  let state = createGame({ rng, config: configFromSettings(settings) });
   const steps: Step[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < plies && state.public.status.kind === "ongoing"; i++) {
@@ -54,9 +57,9 @@ function simulate(seed: number, plies: number): Plan {
 }
 
 /** Finds a seed whose game has a safe-start relocation, an explosion and a reshuffle. */
-function findScenario(): Plan {
+function findScenario(settings: GameSettings): Plan {
   for (let seed = 1; seed < 5000; seed++) {
-    const plan = simulate(seed, 30);
+    const plan = simulate(seed, 30, settings);
     if (
       plan.seen.has("MineRelocated") &&
       plan.seen.has("MineTriggered") &&
@@ -76,11 +79,19 @@ afterEach(async () => {
 
 const FORBIDDEN = ['"mines"', "hidden", "safeStart", "chainCaptured", "MineRelocated"];
 
-describe("no hidden information leaks before game over", () => {
+// 3.7: the default settings, and a custom pair chosen by the creator.
+const SETTINGS: readonly GameSettings[] = [
+  DEFAULT_SETTINGS,
+  { reshuffleInterval: 3, densityPercent: 40 },
+];
+
+describe.each(SETTINGS)("no hidden information leaks before game over (%o)", (settings) => {
   it("keeps every frame clean through relocation, explosions, a reshuffle and game end", async () => {
-    const plan = findScenario();
+    const plan = findScenario(settings);
     h = await startHarness({ rng: createSeededRng(plan.seed) });
-    const { a, b } = await twoPlayers(h);
+    const { a, b, ja } = await twoPlayers(h, settings);
+    // 3.7: the settings are public, so they appear in the joined message and every view.
+    expect(ja.settings).toEqual(settings);
 
     let seq = 0;
     for (const step of plan.steps) {
@@ -123,7 +134,7 @@ describe("no hidden information leaks before game over", () => {
   });
 
   it("covers the scenario: the plan really contains each hidden-state event", () => {
-    const plan = findScenario();
+    const plan = findScenario(settings);
     expect(plan.seen).toContain("MineRelocated");
     expect(plan.seen).toContain("MineTriggered");
     expect(plan.seen).toContain("Reshuffled");

@@ -46,7 +46,7 @@ function takeJoinParam(): string {
 
 export function App({ rng, gate = true, createOnlineClient }: AppProps) {
   const [options, setOptions] = useState(loadOptions);
-  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [newGameOpen, setNewGameOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(() => !loadRulesHidden());
   const [joinCode] = useState(takeJoinParam);
   const [lobbyOpen, setLobbyOpen] = useState(joinCode !== "");
@@ -74,10 +74,12 @@ export function App({ rng, gate = true, createOnlineClient }: AppProps) {
     lobbyOpen && !online.active ? (
       <LobbyDialog
         initialCode={joinCode}
+        settings={options}
         error={online.lobbyError}
-        onCreate={() => {
+        onCreate={(settings) => {
+          saveOpts(settings);
           setLobbyOpen(false);
-          online.create();
+          online.create(settings);
         }}
         onJoin={(code) => {
           setLobbyOpen(false);
@@ -169,11 +171,10 @@ export function App({ rng, gate = true, createOnlineClient }: AppProps) {
       ctl={ctl}
       online={ctl.mode === "online" ? online : null}
       gate={ctl.mode === "local" && gate}
-      config={config}
       options={options}
       onSaveOptions={saveOpts}
-      optionsOpen={optionsOpen}
-      onOptionsOpen={setOptionsOpen}
+      newGameOpen={newGameOpen}
+      onNewGameOpen={setNewGameOpen}
       rulesOpen={rulesOpen}
       onRulesOpen={setRulesOpen}
       onlineAvailable={onlineAvailable}

@@ -1,4 +1,5 @@
 import type { CastlingRights, Color, PieceType, PromotionPiece, Square } from "../chess/types";
+import type { GameSettings } from "../mines/settings";
 import type { GameOverReason, GameResult, GameStatus, Lives } from "../mines/state";
 
 /**
@@ -75,6 +76,8 @@ export interface PublicView {
   readonly craters: readonly Square[];
   /** Live mines on the board: a public count, never positions (3.2). */
   readonly mineCount: number;
+  /** The settings this game runs with: public, so nobody is surprised by them (3.9). */
+  readonly settings: GameSettings;
   /** Turns left before the next reshuffle (3.7). */
   readonly turnsUntilReshuffle: number;
   readonly status: GameStatus;

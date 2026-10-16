@@ -6,6 +6,10 @@ const parse = (value: unknown) => parseClientMessage(JSON.stringify(value));
 
 const valid: Record<string, unknown> = {
   create_room: { type: "create_room" },
+  create_room_settings: {
+    type: "create_room",
+    settings: { reshuffleInterval: 4, densityPercent: 35 },
+  },
   join_room: { type: "join_room", code: "ABCDEF" },
   join_room_token: { type: "join_room", code: "XYZ234", token: "abc_DEF-123" },
   move: { type: "move", seq: 0, from: 12, to: 28 },
@@ -20,6 +24,20 @@ const valid: Record<string, unknown> = {
 const invalid: Record<string, unknown> = {
   unknown_type: { type: "nope" },
   no_type: {},
+  create_room_partial_settings: { type: "create_room", settings: { reshuffleInterval: 4 } },
+  create_room_fraction: {
+    type: "create_room",
+    settings: { reshuffleInterval: 4.5, densityPercent: 30 },
+  },
+  create_room_string: {
+    type: "create_room",
+    settings: { reshuffleInterval: "4", densityPercent: 30 },
+  },
+  create_room_extra_setting: {
+    type: "create_room",
+    settings: { reshuffleInterval: 4, densityPercent: 30, mineCap: 3 },
+  },
+  create_room_null_settings: { type: "create_room", settings: null },
   join_short_code: { type: "join_room", code: "ABC" },
   join_ambiguous_chars: { type: "join_room", code: "ABCDE0" },
   join_lowercase: { type: "join_room", code: "abcdef" },
@@ -65,6 +83,23 @@ describe("parseClientMessage", () => {
     }
   });
 
+  // 3.7: out-of-range settings are clamped, never rejected.
+  it("clamps create_room settings to the allowed bounds", () => {
+    const clamp = (reshuffleInterval: number, densityPercent: number) => {
+      const r = parse({ type: "create_room", settings: { reshuffleInterval, densityPercent } });
+      return r.ok && r.message.type === "create_room" ? r.message.settings : undefined;
+    };
+    expect(clamp(0, 0)).toEqual({ reshuffleInterval: 2, densityPercent: 5 });
+    expect(clamp(500, 500)).toEqual({ reshuffleInterval: 20, densityPercent: 50 });
+    expect(clamp(-7, 33)).toEqual({ reshuffleInterval: 2, densityPercent: 35 });
+    expect(clamp(9, 30)).toEqual({ reshuffleInterval: 9, densityPercent: 30 });
+  });
+
+  it("leaves settings undefined when none are sent", () => {
+    const r = parse({ type: "create_room" });
+    expect(r.ok && r.message.type === "create_room" && r.message.settings).toBeUndefined();
+  });
+
   it("returns the typed message", () => {
     const r = parse(valid.move_promo);
     expect(r.ok && r.message.type === "move" && r.message.promo).toBe("q");
@@ -94,6 +129,18 @@ describe("serverMessageSchema", () => {
       serverMessageSchema.safeParse({ type: "game_over", over: { view, mines: [], x: 1 } }).success,
     ).toBe(false);
     expect(serverMessageSchema.safeParse({ type: "other" }).success).toBe(false);
+  });
+
+  // 3.7: both players see the settings, from the first message on.
+  it("carries the settings in joined and in every view", () => {
+    const settings = { reshuffleInterval: 6, densityPercent: 30 };
+    expect(view.settings).toEqual(settings);
+    const joined = { type: "joined", code: "ABCDEF", seat: "w", token: "abc", settings };
+    expect(serverMessageSchema.safeParse(joined).success).toBe(true);
+    const bare = { type: "joined", code: "ABCDEF", seat: "w", token: "abc" };
+    expect(serverMessageSchema.safeParse(bare).success).toBe(false);
+    const extra = { ...joined, settings: { ...settings, mineCap: 2 } };
+    expect(serverMessageSchema.safeParse(extra).success).toBe(false);
   });
 
   it("accepts small messages", () => {
