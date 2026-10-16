@@ -1,43 +1,24 @@
 import type { EventView } from "@chessweeper/engine";
+import { cuesFor, type Cue } from "./cues";
+import { isMuted, setMuted, subscribeMuted } from "./settings";
+import { hasContext, initContext, play } from "./synth";
 
-// STUB: replaced by the real audio module at merge.
-export type Cue =
-  | "move"
-  | "capture"
-  | "flag"
-  | "reveal"
-  | "explosion"
-  | "kingHit"
-  | "check"
-  | "reshuffle"
-  | "gameOver"
-  | "click";
+export type { Cue };
+export { isMuted, setMuted, subscribeMuted };
 
-let muted = false;
-const listeners = new Set<() => void>();
-
+/** Creates/resumes the AudioContext. Call on the first user pointer or key event. */
 export function unlockAudio(): void {
-  // no-op
+  initContext();
 }
 
-export const playCue: (cue: Cue) => void = () => undefined;
+export function playCue(cue: Cue): void {
+  if (!hasContext() || isMuted()) return;
+  play(cue);
+}
 
-export const playCues: (events: readonly EventView[]) => void = () => undefined;
-
-export function setMuted(b: boolean): void {
-  muted = b;
-  listeners.forEach((fn) => {
-    fn();
+export function playCues(events: readonly EventView[]): void {
+  if (!hasContext() || isMuted()) return;
+  cuesFor(events).forEach((cue, i) => {
+    play(cue, i * 0.12);
   });
-}
-
-export function isMuted(): boolean {
-  return muted;
-}
-
-export function subscribeMuted(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
 }
