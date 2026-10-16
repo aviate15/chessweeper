@@ -90,7 +90,33 @@ describe("checkmate and stalemate", () => {
   });
 });
 
+describe("king death inside a check-exception chain", () => {
+  // 3.4, 3.6: the follow-up king move hits a mine on its last life, so the mover loses.
+  it("ends the game when the follow-up king move costs its last life", () => {
+    const fen = "b3k3/8/8/8/8/8/8/4R2K b - - 0 1";
+    const game = gameFromScenario({ fen, mines: ["e4", "d8"], lives: { w: 3, b: 1 } });
+    const first = play(game, "a8e4").state;
+    expect(first.public.checkException).toBe("b");
+    const { state } = play(first, "e8d8");
+    expect(state.public.status).toEqual({ kind: "over", result: "w", reason: "king-lives" });
+    expect(state.public.checkException).toBeNull();
+  });
+});
+
 describe("after the game is over", () => {
+  // 3.6: a real ending (not a hand-made status) also rejects further moves.
+  it("rejects moves after a king-lives ending", () => {
+    const game = gameFromScenario({
+      fen: "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+      mines: ["e2"],
+      lives: { w: 1, b: 3 },
+    });
+    const { state } = play(game, "e1e2");
+    const move = legalMoves(state.position)[0];
+    if (move === undefined) throw new Error("setup");
+    expect(() => resolveMove(state, move)).toThrow(GameOverError);
+  });
+
   // 3.6: moves are rejected.
   it("rejects further moves", () => {
     const fen = "4k3/8/8/8/8/8/8/R3K3 w - - 0 1";
