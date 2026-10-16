@@ -6,6 +6,9 @@ import {
   EXPLOSION_FRAMES,
   FLAG,
   MINE,
+  MINE_BIG,
+  MINE_BLACK,
+  MINE_WHITE,
   NUMBER_SPRITES,
   OVERLAY_CHECK,
   OVERLAY_LAST_MOVE,
@@ -49,6 +52,10 @@ export interface SquareProps {
   flagged: boolean;
   /** Final mine layout, only passed once the game is over. */
   mine: boolean;
+  /** Manual mine mode: whose mine this is ("big" = both placed it). Plain sprite when absent. */
+  mineKind?: "w" | "b" | "big" | undefined;
+  /** Placement: a piece stands here, so the square cannot be clicked. */
+  disabled?: boolean | undefined;
   fx: SquareFx | undefined;
   /** Changes every turn so effect layers restart their CSS animation. */
   fxKey: number;
@@ -58,6 +65,8 @@ export interface SquareProps {
   onClick: (square: Sq) => void;
   onContextMenu: (square: Sq) => void;
 }
+
+const MINE_SPRITES = { plain: MINE, w: MINE_WHITE, b: MINE_BLACK, big: MINE_BIG } as const;
 
 const delay = (ms: number | undefined) => (ms ? { animationDelay: `${String(ms)}ms` } : {});
 
@@ -99,6 +108,8 @@ export function Square(props: SquareProps) {
       data-mine={props.mine || undefined}
       data-destination={props.destination || undefined}
       aria-label={name}
+      disabled={props.disabled}
+      data-mine-kind={props.mineKind}
       aria-describedby={props.description ? `sq-desc-${name}` : undefined}
       title={props.description ?? undefined}
       onFocus={() => {
@@ -122,7 +133,7 @@ export function Square(props: SquareProps) {
       {props.selected && <Px sprite={OVERLAY_SELECTED} className="layer" />}
       {props.mine && (
         <Px
-          sprite={MINE}
+          sprite={MINE_SPRITES[props.mineKind ?? "plain"]}
           className={fx?.mineIndex === undefined ? "layer" : "layer fx-mine"}
           style={
             fx?.mineIndex === undefined

@@ -201,6 +201,24 @@ export function RulesDialog({
           <li>Normal captures never hit a mine.</li>
         </ul>
 
+        <h3>Manual mine mode</h3>
+        <ul>
+          <li>
+            In Manual mine mode the players place the mines. Before play, and again after every
+            reshuffle, each player marks the same number of mines on empty squares. Your marks are
+            private. Press Done when you are finished.
+          </li>
+          <li>
+            If you have not marked your full number when placing ends, the missing mines are placed
+            at random for you, and you are told how many.
+          </li>
+          <li>
+            A square both players marked is a big mine. It counts double in numbers and in the mine
+            count, and when it is triggered it blasts the 3x3 area around it.
+          </li>
+          <li>There is no safe first move in this mode.</li>
+        </ul>
+
         <h3>Flags</h3>
         <p>
           Right-click (or use Flag mode) to flag a suspected mine. Flags are private notes: the

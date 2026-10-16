@@ -1041,3 +1041,21 @@ button {
   color: #a00000;
   font-weight: 700;
 }
+
+/* ---- Manual mine placement (3.10) ---- */
+.placement-title {
+  font-size: 8px;
+  text-align: center;
+}
+
+.placement-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 120px;
+  font-size: 8px;
+}
+
+.placement-notice {
+  color: var(--px-maroon);
+}

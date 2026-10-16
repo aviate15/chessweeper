@@ -1,4 +1,5 @@
 import type { Color, EventView, PieceView, Square } from "@chessweeper/engine";
+import type { BigMineBlastedEvent } from "./components/placementTypes";
 
 /** Timings in ms. Pure data: the CSS keyframes in theme.css use the same numbers. */
 export const SLIDE_MS = 140;
@@ -11,6 +12,8 @@ export const CHECK_MS = 600;
 export const WAVE_ROW_MS = 30;
 export const WAVE_MS = 240;
 export const MINE_STAGGER_MS = 40;
+/** A big mine blast (3.10) ripples outwards: each ring of the 3x3 starts this much later. */
+export const BLAST_RING_MS = 70;
 /** The explosion gate never blocks longer than this (UI decision, local play only). */
 export const MAX_BLOCKING_MS = 800;
 
@@ -22,7 +25,14 @@ export type Fx =
   | { kind: "lifeCrack"; color: Color; square: Square; delayMs: number; durationMs: number }
   | { kind: "check"; square: Square; delayMs: number; durationMs: number }
   | { kind: "reshuffle"; delayMs: number; durationMs: number }
-  | { kind: "mineReveal"; delayMs: number; durationMs: number };
+  | { kind: "mineReveal"; delayMs: number; durationMs: number }
+  | {
+      kind: "blast";
+      square: Square;
+      area: readonly Square[];
+      delayMs: number;
+      durationMs: number;
+    };
 
 export interface Presentation {
   /** How long a local client may hold the handoff/dialog back so the explosion is seen. */
@@ -57,7 +67,7 @@ function rookSlide(from: Square, castle: "king" | "queen"): { from: Square; to: 
  * Pure; under reduced motion there are no effects and nothing blocks.
  */
 export function presentationFor(
-  events: readonly EventView[],
+  events: readonly (EventView | BigMineBlastedEvent)[],
   options: PresentationOptions,
 ): Presentation {
   if (options.reducedMotion) return NO_PRESENTATION;
@@ -95,6 +105,14 @@ export function presentationFor(
         mineIndex++;
         fx.push({ kind: "explosion", square: e.square, delayMs, durationMs: EXPLOSION_MS });
         blocking = Math.max(blocking, delayMs + EXPLOSION_MS + 60);
+        break;
+      }
+      case "BigMineBlasted": {
+        const delayMs = SLIDE_MS + mineIndex * (EXPLOSION_MS / 2);
+        mineIndex++;
+        const durationMs = EXPLOSION_MS + BLAST_RING_MS;
+        fx.push({ kind: "blast", square: e.square, area: e.area, delayMs, durationMs });
+        blocking = Math.max(blocking, delayMs + durationMs + 60);
         break;
       }
       case "LifeLost":
