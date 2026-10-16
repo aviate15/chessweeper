@@ -150,6 +150,29 @@ describe("a king on a mine", () => {
   });
 });
 
+describe("king edge cases", () => {
+  const fen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
+
+  // 3.6: a mined escape square is still a legal move; the king just pays a life.
+  it("may step onto a mined square (legality ignores mines, 3.8 step 1)", () => {
+    const game = scenario({ fen, mines: ["d1", "d2", "e2", "f2", "f1"] });
+    expect(legalMoves(game.position).map(moveToUci).sort()).toEqual([
+      "e1d1",
+      "e1d2",
+      "e1e2",
+      "e1f1",
+      "e1f2",
+    ]);
+  });
+
+  // 3.2, 3.4: a king landing on an existing crater is safe and reveals its number.
+  it("lands safely on an existing crater and reveals it", () => {
+    const { state } = play(scenario({ fen, craters: ["e2"], mines: ["d3"] }), "e1e2");
+    expect(state.public.lives).toEqual({ w: 3, b: 3 });
+    expect(state.public.revealed.has(sq("e2"))).toBe(true);
+  });
+});
+
 describe("guard rails for later milestones", () => {
   const kingsOnly = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
 

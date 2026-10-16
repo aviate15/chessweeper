@@ -49,7 +49,7 @@ export function resolveMove(state: GameState, move: Move): Resolution {
 
   // Rules for these arrive in later milestones.
   if (legal.castle !== null || legal.enPassant || legal.promotion !== null) {
-    throw new NotYetSupportedError("castling, en passant and promotion on mines");
+    throw new NotYetSupportedError("castling, en passant and promotion (M6)");
   }
   if (state.public.lives.w === 0 || state.public.lives.b === 0) {
     throw new NotYetSupportedError("moves after a king has lost its last life");
