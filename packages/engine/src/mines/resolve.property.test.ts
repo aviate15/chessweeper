@@ -217,7 +217,7 @@ describe("mine invariants over random games", () => {
         fc.nat({ max: 40 }),
         fc.integer({ min: 2, max: 9 }),
         fc.tuple(fc.integer({ min: 1, max: 3 }), fc.integer({ min: 1, max: 3 })),
-        fc.nat({ max: 9 }),
+        fc.nat({ max: 5 }),
         choicesArb,
         (seed, prelude, density, [whiteLives, blackLives], counter, choices) => {
           // Plain-chess prelude without mines, then mines on random empty squares.

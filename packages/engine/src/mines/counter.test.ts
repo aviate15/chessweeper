@@ -60,7 +60,7 @@ describe("no-capture counter", () => {
     });
 
     it("prevents a reshuffle that the counter would otherwise have triggered", () => {
-      const game = gameFromScenario({ fen, mines: ["d6"], noCaptureCount: 9 });
+      const game = gameFromScenario({ fen, mines: ["d6"], noCaptureCount: 5 });
       const done = play(play(game, "e5d6").state, "a3a2");
       expect(done.events.some((e) => e.type === "Reshuffled")).toBe(false);
       expect(done.state.public.noCaptureCount).toBe(0);
@@ -68,7 +68,7 @@ describe("no-capture counter", () => {
   });
 
   it("derives the turns until the reshuffle", () => {
-    expect(turnsUntilReshuffle(gameFromScenario({ fen: ROOK }))).toBe(10);
-    expect(turnsUntilReshuffle(gameFromScenario({ fen: ROOK, noCaptureCount: 4 }))).toBe(6);
+    expect(turnsUntilReshuffle(gameFromScenario({ fen: ROOK }))).toBe(6);
+    expect(turnsUntilReshuffle(gameFromScenario({ fen: ROOK, noCaptureCount: 4 }))).toBe(2);
   });
 });
