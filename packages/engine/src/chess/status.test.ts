@@ -13,6 +13,7 @@ describe("gameStatus", () => {
     expect(gameStatus(parseFen(foolsMate))).toBe("checkmate");
   });
 
+  // 3.6 checkmate: in check with no chess-legal move.
   it("detects back-rank mate", () => {
     expect(gameStatus(parseFen("3R2k1/5ppp/8/8/8/8/8/6K1 b - - 0 1"))).toBe("checkmate");
   });
@@ -22,6 +23,7 @@ describe("gameStatus", () => {
     expect(gameStatus(parseFen("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1"))).toBe("stalemate");
   });
 
+  // 3.6 a king is only checkmated when it has no chess-legal move at all.
   it("is not checkmate when the king can escape", () => {
     expect(gameStatus(parseFen("3R2k1/5pp1/8/8/8/8/8/6K1 b - - 0 1"))).toBe("ongoing");
   });
