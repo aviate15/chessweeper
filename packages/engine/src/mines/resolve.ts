@@ -108,7 +108,11 @@ export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution 
   if (rook !== null && work.board[rook.from] != null) {
     work.board[rook.from] = null;
     work.board[rook.to] = rookPiece;
-    if (work.lives[mover] > 0 && resolveLanding(work, rook.to, rookPiece, false) === "destroyed") {
+    if (
+      work.lives.w > 0 &&
+      work.lives.b > 0 &&
+      resolveLanding(work, rook.to, rookPiece, false) === "destroyed"
+    ) {
       destroyed = true;
     }
   }
