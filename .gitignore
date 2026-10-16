@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Chessweeper
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+.claude/settings.local.json

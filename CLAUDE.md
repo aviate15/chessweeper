@@ -5,6 +5,7 @@ Chess + Minesweeper web game. Hidden mines, public numbers, private flags, kings
 Game rules: @docs/GAME_DESIGN.md
 
 ## Working agreement
+
 - `docs/GAME_DESIGN.md` is the single source of truth for mechanics. Never invent, change, or "fix" a rule on your own.
 - If a rule is missing, ambiguous, or seems wrong, stop and ask me. Offer 2-3 options with tradeoffs. Once I decide, record it in the design doc before coding it.
 - I (Aviate) co-design everything: mechanics, UI/UX, visuals. Propose, don't decide, on design questions.
@@ -12,6 +13,7 @@ Game rules: @docs/GAME_DESIGN.md
 - Use plan mode for anything non-trivial. Ask before large or irreversible changes.
 
 ## Architecture
+
 - Monorepo, pnpm workspaces, TypeScript everywhere (strict mode).
 - `packages/engine`: pure rules engine. No DOM, no network, no clock. RNG is injected (seedable in tests, cryptographically random in production).
 - `apps/server`: Node + `ws` WebSocket server. Server-authoritative. Mine positions never leave the server; clients only receive revealed numbers, craters, and their own flags.
@@ -19,6 +21,7 @@ Game rules: @docs/GAME_DESIGN.md
 - Flags are private per player. Numbers and craters are public.
 
 ## Conventions
+
 - Work on branches, make small commits, open PRs with `gh`. Never push to main.
 - Every engine rule has a unit test (Vitest) that names its design-doc section, e.g. `// 3.4 check exception`.
 - Before saying work is done: tests, lint, and typecheck all pass.
@@ -26,4 +29,17 @@ Game rules: @docs/GAME_DESIGN.md
 - Visual style: authentic old-school Windows Minesweeper (beveled gray panels, pixel art, LED counters, pixel typeface). No modern UI defaults.
 
 ## Commands
-Fill this in once the scaffold exists: install, dev, test, lint, typecheck, build.
+
+Node 24 (`.nvmrc`; >=22 works), pnpm 12. Run from the repo root.
+
+- `pnpm install`: install all workspace dependencies.
+- `pnpm test`: run every Vitest project once (`pnpm test:watch` to watch).
+- `pnpm --filter @chessweeper/engine test`: test a single package.
+- `pnpm lint`: ESLint (strict type-checked; engine purity rules).
+- `pnpm typecheck`: `tsc --noEmit` for root configs and every package.
+- `pnpm format` / `pnpm format:check`: Prettier.
+- `pnpm check`: format:check, lint, typecheck and test. Must pass before saying work is done.
+- `pnpm build`: build packages that define a build script (none yet).
+- Dev servers: none yet (added with `apps/server` and `apps/web`).
+
+Hooks in `.claude/settings.json` auto-format edited files and block `git commit` when typecheck fails.
