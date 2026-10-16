@@ -1,5 +1,7 @@
 # Deploying Chessweeper
 
+> **Not in use right now.** Games currently run from a laptop through a free tunnel: see [PLAY_ONLINE.md](PLAY_ONLINE.md). This guide is kept for when the project moves to real hosting.
+
 Two pieces: the game server on **Fly.io** (`chessweeper-server`, region `sin`) and the web client on **Vercel**. Every command below is one you run yourself; nothing here needs to be committed with secrets.
 
 Names used below (change them everywhere if you pick different ones):

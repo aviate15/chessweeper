@@ -2,7 +2,7 @@
 
 Chess meets Minesweeper. Mines hide on the board, landing on a square reveals how many mines surround it, and pieces that step on a mine blow up. Kings have three lives. Numbers are public, flags are private, and every 8 turns without a capture the mines reshuffle. Online and local pass-and-play, in an old-school Windows Minesweeper look.
 
-Status: playable. Local pass-and-play and online two-player games (lobby, invite links, reconnect) work; deployment config for Fly.io and Vercel is in [`docs/DEPLOY.md`](docs/DEPLOY.md). Rules live in [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md).
+Status: playable. Local pass-and-play and online two-player games (lobby, invite links, reconnect) work; play with friends from your laptop via [`docs/PLAY_ONLINE.md`](docs/PLAY_ONLINE.md); Fly.io and Vercel config is kept in [`docs/DEPLOY.md`](docs/DEPLOY.md). Rules live in [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md).
 
 ## Quickstart
 
@@ -21,7 +21,11 @@ pnpm --filter @chessweeper/web dev   # play local pass-and-play in the browser
 - **Game → Options** sets the reshuffle interval (default 8 turns) and mine density (default 25%). Changes apply at the next New game.
 - Right-click (or the flag button) places private flags. Sound and board flipping are toggles in the Game menu.
 
-## Deploying
+## Play online with friends
+
+One command runs the server on your laptop and shares it through a free Cloudflare quick tunnel (no account, no cost): `pnpm play`. Steps and limits are in [`docs/PLAY_ONLINE.md`](docs/PLAY_ONLINE.md).
+
+## Deploying (later)
 
 Server on Fly.io, web on Vercel. Step-by-step commands, rollback and a post-deploy smoke check are in [`docs/DEPLOY.md`](docs/DEPLOY.md).
 

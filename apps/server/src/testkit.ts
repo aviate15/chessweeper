@@ -4,7 +4,9 @@ import { createSeededRng, type Rng } from "@chessweeper/engine";
 import { serverMessageSchema, type ServerMessage } from "@chessweeper/protocol";
 import type { Clock } from "./clock";
 import { createLogger } from "./log";
+import type { ProxyMode } from "./ip";
 import type { Limits } from "./limits";
+import type { StaticSite } from "./static";
 import { createServer, type RunningServer } from "./server";
 
 export const ORIGIN = "http://app.test";
@@ -67,7 +69,8 @@ export async function startHarness(
   opts: {
     rng?: Rng;
     limits?: Partial<Limits>;
-    trustProxy?: boolean;
+    trustProxy?: boolean | ProxyMode;
+    staticSite?: StaticSite;
     allowedOrigins?: string[];
   } = {},
 ): Promise<Harness> {
@@ -83,6 +86,7 @@ export async function startHarness(
     // The fake clock never refills buckets, so give ordinary tests a roomy burst.
     limits: { messageBurst: 10_000, ...opts.limits },
     trustProxy: opts.trustProxy ?? false,
+    ...(opts.staticSite === undefined ? {} : { staticSite: opts.staticSite }),
     logger: createLogger((line) => {
       logs.push(line);
       for (const w of logWaiters) {

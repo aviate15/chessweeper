@@ -27,7 +27,8 @@ import {
 } from "@chessweeper/protocol";
 import { realClock, type Clock } from "./clock";
 import { createCryptoRng, newInviteCode, newSeatToken, tokensEqual } from "./crypto";
-import { clientIp } from "./ip";
+import { clientIp, type ProxyMode } from "./ip";
+import type { StaticSite } from "./static";
 import { DEFAULT_LIMITS, TokenBucket, type Limits } from "./limits";
 import { createLogger, type Logger } from "./log";
 
@@ -41,8 +42,10 @@ export interface ServerOptions {
   /** Exact Origin values allowed to upgrade. Empty means nobody (fail closed). */
   readonly allowedOrigins: readonly string[];
   readonly limits?: Partial<Limits>;
-  /** Read Fly-Client-IP for per-IP limits. Off unless the server sits behind a trusted proxy. */
-  readonly trustProxy?: boolean;
+  /** Which proxy header to believe for per-IP limits. Off unless behind a trusted proxy. */
+  readonly trustProxy?: boolean | ProxyMode;
+  /** Built web app to serve over plain HTTP, with an SPA fallback. */
+  readonly staticSite?: StaticSite;
   readonly logger?: Logger;
 }
 
@@ -497,14 +500,29 @@ export function createServer(options: ServerOptions): RunningServer {
 
   const wss = new WebSocketServer({ noServer: true, maxPayload: limits.maxPayloadBytes });
 
+  const staticSite = options.staticSite;
   const http = createHttpServer((req, res) => {
-    const ok = req.url === "/healthz" && (req.method === "GET" || req.method === "HEAD");
-    res.writeHead(ok ? 200 : 404, {
+    if (req.url === "/healthz" && (req.method === "GET" || req.method === "HEAD")) {
+      res.writeHead(200, {
+        "Content-Type": "text/plain",
+        "Content-Length": 2,
+        "Cache-Control": "no-store",
+      });
+      res.end(req.method === "GET" ? "ok" : "");
+      return;
+    }
+    if (staticSite !== undefined) {
+      const out = staticSite.respond(req.method, req.url);
+      res.writeHead(out.status, out.headers);
+      res.end(req.method === "HEAD" ? undefined : out.body);
+      return;
+    }
+    res.writeHead(404, {
       "Content-Type": "text/plain",
-      "Content-Length": ok ? 2 : 0,
+      "Content-Length": 0,
       "Cache-Control": "no-store",
     });
-    res.end(ok && req.method === "GET" ? "ok" : "");
+    res.end();
   });
 
   function reject(socket: Duplex, status: string): void {

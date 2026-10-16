@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { CODE_ALPHABET } from "@chessweeper/protocol";
+import type { IncomingMessage } from "node:http";
 import { loadConfig } from "./config";
+import { clientIp } from "./ip";
 import { createCryptoRng, newInviteCode, newSeatToken, tokensEqual } from "./crypto";
 import { DEFAULT_LIMITS, TokenBucket } from "./limits";
 import { createLogger } from "./log";
@@ -54,10 +56,14 @@ describe("loadConfig", () => {
   });
 
   it("reads TRUST_PROXY and PORT, defaulting to untrusted", () => {
-    expect(loadConfig({}).trustProxy).toBe(false);
-    expect(loadConfig({ TRUST_PROXY: "1" }).trustProxy).toBe(true);
-    expect(loadConfig({ TRUST_PROXY: "true" }).trustProxy).toBe(true);
-    expect(loadConfig({ TRUST_PROXY: "yes" }).trustProxy).toBe(false);
+    expect(loadConfig({}).trustProxy).toBe("none");
+    expect(loadConfig({ TRUST_PROXY: "1" }).trustProxy).toBe("fly");
+    expect(loadConfig({ TRUST_PROXY: "true" }).trustProxy).toBe("fly");
+    expect(loadConfig({ TRUST_PROXY: "fly" }).trustProxy).toBe("fly");
+    expect(loadConfig({ TRUST_PROXY: "cloudflare" }).trustProxy).toBe("cloudflare");
+    expect(loadConfig({ TRUST_PROXY: "yes" }).trustProxy).toBe("none");
+    expect(loadConfig({}).staticDir).toBeNull();
+    expect(loadConfig({ STATIC_DIR: "apps/web/dist" }).staticDir).toBe("apps/web/dist");
     expect(loadConfig({ PORT: "9000" }).port).toBe(9000);
     expect(() => loadConfig({ PORT: "abc" })).toThrow();
   });
@@ -92,6 +98,28 @@ describe("loadConfig limits", () => {
   it("defaults are generous for shared IPs", () => {
     expect(DEFAULT_LIMITS.maxRoomsPerIp).toBeGreaterThanOrEqual(30);
     expect(DEFAULT_LIMITS.maxConnectionsPerIp).toBeGreaterThanOrEqual(100);
+  });
+});
+
+describe("clientIp", () => {
+  const req = (peer: string, headers: Record<string, string>) =>
+    ({ socket: { remoteAddress: peer }, headers }) as unknown as IncomingMessage;
+
+  it("cloudflare mode believes CF-Connecting-IP only from a loopback peer", () => {
+    const h = { "cf-connecting-ip": "203.0.113.5" };
+    expect(clientIp(req("127.0.0.1", h), "cloudflare")).toBe("203.0.113.5");
+    expect(clientIp(req("::1", h), "cloudflare")).toBe("203.0.113.5");
+    expect(clientIp(req("::ffff:127.0.0.1", h), "cloudflare")).toBe("203.0.113.5");
+    expect(clientIp(req("192.168.1.9", h), "cloudflare")).toBe("192.168.1.9");
+    expect(clientIp(req("127.0.0.1", { "cf-connecting-ip": "x" }), "cloudflare")).toBe("127.0.0.1");
+  });
+
+  it("other modes ignore it", () => {
+    const h = { "cf-connecting-ip": "203.0.113.5", "fly-client-ip": "198.51.100.1" };
+    expect(clientIp(req("127.0.0.1", h), "none")).toBe("127.0.0.1");
+    expect(clientIp(req("127.0.0.1", h), false)).toBe("127.0.0.1");
+    expect(clientIp(req("127.0.0.1", h), true)).toBe("198.51.100.1");
+    expect(clientIp(req("127.0.0.1", h), "fly")).toBe("198.51.100.1");
   });
 });
 

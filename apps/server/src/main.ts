@@ -11,14 +11,17 @@
  */
 import { loadConfig } from "./config";
 import { createServer } from "./server";
+import { loadStaticSite } from "./static";
 
 const config = loadConfig(process.env);
+const staticSite = config.staticDir === null ? undefined : loadStaticSite(config.staticDir);
 const server = createServer({
   port: config.port,
   host: config.host,
   allowedOrigins: config.allowedOrigins,
   trustProxy: config.trustProxy,
   limits: config.limits,
+  ...(staticSite === undefined ? {} : { staticSite }),
 });
 const port = await server.listen();
 // Numbers only: never the origin list or any other environment value.
@@ -27,6 +30,8 @@ console.log(
     event: "listening",
     port,
     origins: config.allowedOrigins.length,
+    proxy: config.trustProxy,
+    static: staticSite?.fileCount ?? 0,
     ...config.limits,
   }),
 );

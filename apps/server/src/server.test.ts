@@ -445,6 +445,30 @@ describe("hardening", () => {
     );
   });
 
+  it("cloudflare mode reads CF-Connecting-IP from a local tunnel, per real client", async () => {
+    const hh = await start({ limits: { maxConnectionsPerIp: 1 }, trustProxy: "cloudflare" });
+    await hh.connect({ headers: { "CF-Connecting-IP": "203.0.113.1" } });
+    expect(await upgradeStatus(hh, "http://app.test", { "CF-Connecting-IP": "203.0.113.2" })).toBe(
+      "open",
+    );
+    expect(await upgradeStatus(hh, "http://app.test", { "CF-Connecting-IP": "203.0.113.1" })).toBe(
+      "status 429",
+    );
+    // A malformed header falls back to the socket address; Fly's header is not read.
+    expect(await upgradeStatus(hh, "http://app.test", { "CF-Connecting-IP": "junk" })).toBe("open");
+    expect(await upgradeStatus(hh, "http://app.test", { "Fly-Client-IP": "10.9.9.9" })).toBe(
+      "status 429",
+    );
+  });
+
+  it("never logs the real client IP in cloudflare mode", async () => {
+    const hh = await start({ trustProxy: "cloudflare" });
+    const a = await hh.connect({ headers: { "CF-Connecting-IP": "203.0.113.77" } });
+    await a.create();
+    expect(hh.logs.length).toBeGreaterThan(0);
+    expect(hh.logs.join("\n")).not.toContain("203.0.113.77");
+  });
+
   it("never logs seat tokens or invite codes", async () => {
     const hh = await start();
     const { a, ja, jb } = await twoPlayers(hh);
