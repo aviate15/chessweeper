@@ -479,10 +479,9 @@ button {
   pointer-events: none;
 }
 
-.layer-corner {
-  inset: auto -3px -2px auto;
-  width: 16px;
-  height: 16px;
+/* Number badge: the sprite already sits in the bottom-right corner of its 16x16 cell. */
+.layer-badge {
+  z-index: 1;
 }
 
 .piece {

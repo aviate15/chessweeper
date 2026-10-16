@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { fileOf, rankOf, squareName, type PieceView, type Square as Sq } from "@chessweeper/engine";
 import { PIECE_NAME } from "../narration";
 import {
+  BADGE_SPRITES,
   EXPLOSION_FRAMES,
   FLAG,
   MINE,
@@ -70,6 +71,7 @@ export function Square(props: SquareProps) {
         ? TILE_HIDDEN_DARK
         : TILE_HIDDEN_LIGHT;
   const numberSprite = number !== null && number > 0 ? NUMBER_SPRITES[number - 1] : undefined;
+  const badgeSprite = number !== null && number > 0 ? BADGE_SPRITES[number - 1] : undefined;
   const explosion = fx?.explosion;
   const waveRow = fx?.waveRow;
   const hasWave = waveRow !== undefined;
@@ -116,11 +118,11 @@ export function Square(props: SquareProps) {
           }
         />
       )}
-      {numberSprite && (
+      {numberSprite && !piece && (
         <Px
           key={`n${String(props.fxKey)}`}
           sprite={numberSprite}
-          className={[piece ? "layer layer-corner" : "layer", fx?.flip ? "fx-flip" : ""].join(" ")}
+          className={fx?.flip ? "layer fx-flip" : "layer"}
           style={delay(fx?.flip?.delayMs)}
         />
       )}
@@ -144,6 +146,14 @@ export function Square(props: SquareProps) {
             {piece.color === "w" ? "white" : "black"} {PIECE_NAME[piece.type]}
           </span>
         </span>
+      )}
+      {badgeSprite && piece && (
+        <Px
+          key={`n${String(props.fxKey)}`}
+          sprite={badgeSprite}
+          className={fx?.flip ? "layer layer-badge fx-flip" : "layer layer-badge"}
+          style={delay(fx?.flip?.delayMs)}
+        />
       )}
       {props.check && (
         <Px

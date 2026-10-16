@@ -116,6 +116,44 @@ export const NUMBER_SPRITES: readonly Sprite[] = GLYPHS.map((glyph, i) =>
   overlay(blank16, recolor(glyph, { "#": String(i + 1) }), 4, 2),
 );
 
+// 3x5 digit glyphs for the number badge (a piece stands on the numbered square).
+const BADGE_GLYPHS: readonly (readonly string[])[] = [
+  [".#.", "##.", ".#.", ".#.", "###"],
+  ["##.", "..#", ".#.", "#..", "###"],
+  ["##.", "..#", ".#.", "..#", "##."],
+  ["#.#", "#.#", "###", "..#", "..#"],
+  ["###", "#..", "##.", "..#", "##."],
+  [".##", "#..", "###", "#.#", "###"],
+  ["###", "..#", ".#.", ".#.", ".#."],
+  ["###", "#.#", "###", "#.#", "###"],
+];
+
+const BADGE_BOX: Sprite = [
+  "KKKKKKK",
+  "KVVVVVK",
+  "KVVVVVK",
+  "KVVVVVK",
+  "KVVVVVK",
+  "KVVVVVK",
+  "KVVVVVK",
+  "KVVVVVK",
+  "KKKKKKK",
+];
+
+/**
+ * BADGE_SPRITES[0] is "1" ... [7] is "8": a 7x9 off-white box with a 1px black outline in the
+ * bottom-right corner of a transparent 16x16, holding the classic-coloured digit. Used when a
+ * piece stands on the numbered square, so every colour stays readable.
+ */
+export const BADGE_SPRITES: readonly Sprite[] = BADGE_GLYPHS.map((glyph, i) =>
+  overlay(
+    overlay(blank16, BADGE_BOX, 9, 7),
+    recolor(glyph, { "#": String(i + 1), ".": "V" }),
+    11,
+    9,
+  ),
+);
+
 export const FLAG: Sprite = [
   "................",
   "................",

@@ -5,6 +5,7 @@ const SIZES: Record<string, [number, number]> = {
   pieces: [16, 16],
   tiles: [16, 16],
   numbers: [16, 16],
+  badges: [16, 16],
   marks: [16, 16],
   smileys: [24, 24],
   led: [13, 23],
