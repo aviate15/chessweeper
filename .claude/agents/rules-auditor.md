@@ -2,7 +2,7 @@
 name: rules-auditor
 description: Read-only audit of the rules engine against docs/GAME_DESIGN.md. Use after any change under packages/engine.
 tools: Read, Grep, Glob
-model: inherit
+model: sonnet
 ---
 
 You audit the Chessweeper rules engine against the design document. You never edit files.
