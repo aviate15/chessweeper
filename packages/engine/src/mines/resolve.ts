@@ -8,6 +8,7 @@ import { nextNoCaptureCount } from "./counter";
 import { finishTurn } from "./endturn";
 import { resolveLanding, type Working } from "./landing";
 import { reshuffle } from "./reshuffle";
+import { relocateSafeStartMine } from "./safestart";
 import type { GameState } from "./state";
 
 /** The move is not a legal chess move in the current position. */
@@ -64,6 +65,14 @@ export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution 
     work.events.push({ type: "PieceCaptured", square: legal.captureSquare, piece: legal.captured });
   }
 
+  // 3.1 safe start: a side's very first move of the game cannot hit a mine, so a mine under
+  // its landing square is moved away before the landing resolves. The flag is spent either way.
+  const safeStart = { ...state.hidden.safeStart };
+  if (safeStart[mover]) {
+    if (work.mines.has(legal.to)) relocateSafeStartMine(work, legal.to, rng);
+    safeStart[mover] = false;
+  }
+
   // Landings resolve in order: the moving piece, then (castling only) the rook. A king
   // that loses its last life ends the game, so nothing after that landing resolves.
   // The landing piece is the original one, so a pawn on a mined promotion square dies as a
@@ -108,7 +117,7 @@ export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution 
         checkException: end.checkException,
         noCaptureCount,
       },
-      hidden: { ...state.hidden, mines: work.mines },
+      hidden: { mines: work.mines, safeStart },
     },
     events: work.events,
   };
