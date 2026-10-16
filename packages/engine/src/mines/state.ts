@@ -34,7 +34,7 @@ export interface PublicState {
   /** Public craters left by triggered mines (3.4). */
   readonly craters: ReadonlySet<Square>;
   readonly lives: Lives;
-  /** Turns since the last capture. Unused until the reshuffle work (3.7). */
+  /** Turns since the last capture (3.7). */
   readonly noCaptureCount: number;
   readonly status: GameStatus;
   /**
@@ -52,4 +52,9 @@ export interface HiddenState {
    * clients never need it.
    */
   readonly safeStart: { readonly w: boolean; readonly b: boolean };
+  /**
+   * True while a check-exception chain is pending and an earlier move of the chain captured
+   * a piece, so the turn counts as a capture turn for the reshuffle counter (3.7).
+   */
+  readonly chainCaptured: boolean;
 }

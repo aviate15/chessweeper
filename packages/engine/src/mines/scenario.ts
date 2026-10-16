@@ -53,7 +53,11 @@ export function gameFromScenario(scenario: Scenario): GameState {
       status: scenario.status ?? { kind: "ongoing" },
       checkException: scenario.checkException ?? null,
     },
-    hidden: { mines, safeStart: scenario.safeStart ?? { w: false, b: false } },
+    hidden: {
+      mines,
+      safeStart: scenario.safeStart ?? { w: false, b: false },
+      chainCaptured: false,
+    },
     config,
   };
 }

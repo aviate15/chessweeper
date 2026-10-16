@@ -95,9 +95,11 @@ export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution 
   const end = finishTurn({ before: state.position, moved, work, move: legal, mover, destroyed });
   // 3.7, 3.8 step 8: only a completed turn in a game that goes on counts. A pending chain
   // and the game-ending turn leave the counter alone, and neither can trigger a reshuffle.
+  // A capture earlier in a check-exception chain still makes this a capture turn.
+  const captured = state.hidden.chainCaptured || legal.captured !== null;
   let noCaptureCount = state.public.noCaptureCount;
   if (end.status.kind === "ongoing" && end.checkException === null) {
-    noCaptureCount = nextNoCaptureCount(noCaptureCount, legal.captured !== null);
+    noCaptureCount = nextNoCaptureCount(noCaptureCount, captured);
     if (noCaptureCount >= state.config.reshuffleInterval) {
       reshuffle(work, end.position.board, state.config, rng);
       noCaptureCount = 0;
@@ -117,7 +119,11 @@ export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution 
         checkException: end.checkException,
         noCaptureCount,
       },
-      hidden: { mines: work.mines, safeStart },
+      hidden: {
+        mines: work.mines,
+        safeStart,
+        chainCaptured: end.checkException !== null && captured,
+      },
     },
     events: work.events,
   };

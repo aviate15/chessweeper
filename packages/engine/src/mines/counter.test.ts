@@ -45,6 +45,28 @@ describe("no-capture counter", () => {
     expect(play(pending, "e8d8").state.public.noCaptureCount).toBe(4);
   });
 
+  // 3.7: a capture earlier in a check-exception chain still makes the whole turn a capture
+  // turn, even if the follow-up move is quiet. The bishop on f8 keeps the white king on a3
+  // in check after the en passant capturer dies blocking on d6.
+  describe("a capture earlier in a chain", () => {
+    const fen = "4kb2/8/8/3pP3/8/K7/8/8 w - d6 0 1";
+
+    it("resets the counter once the chain ends", () => {
+      const game = gameFromScenario({ fen, mines: ["d6"], noCaptureCount: 5 });
+      const pending = play(game, "e5d6").state;
+      expect(pending.public.checkException).toBe("w");
+      expect(pending.public.noCaptureCount).toBe(5); // frozen while pending
+      expect(play(pending, "a3a2").state.public.noCaptureCount).toBe(0);
+    });
+
+    it("prevents a reshuffle that the counter would otherwise have triggered", () => {
+      const game = gameFromScenario({ fen, mines: ["d6"], noCaptureCount: 9 });
+      const done = play(play(game, "e5d6").state, "a3a2");
+      expect(done.events.some((e) => e.type === "Reshuffled")).toBe(false);
+      expect(done.state.public.noCaptureCount).toBe(0);
+    });
+  });
+
   it("derives the turns until the reshuffle", () => {
     expect(turnsUntilReshuffle(gameFromScenario({ fen: ROOK }))).toBe(10);
     expect(turnsUntilReshuffle(gameFromScenario({ fen: ROOK, noCaptureCount: 4 }))).toBe(6);

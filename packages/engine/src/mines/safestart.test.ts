@@ -97,6 +97,21 @@ describe("safe start", () => {
       }
     });
 
+    // 3.1: when the old square touches no revealed square, neither may the new one, and the
+    // search prefers ranks 3-6 (many other free squares exist on ranks 1-2 and 7-8 here).
+    it("keeps clear of revealed squares when the old square touches none", () => {
+      for (let seed = 0; seed < 60; seed++) {
+        const rng = createSeededRng(seed);
+        const afterWhite = play(start(["a6", "h6"]), "e2e4", rng).state;
+        const moved = play(afterWhite, "a7a6", rng); // a6 holds a mine, far from e4
+        const to = relocation(moved.events).to;
+        if (to === null) throw new Error("dropped");
+        expect(Math.abs((to % 8) - 4) > 1 || Math.abs(Math.floor(to / 8) - 3) > 1).toBe(true);
+        expect(rankOf(to)).toBeGreaterThanOrEqual(2);
+        expect(rankOf(to)).toBeLessThanOrEqual(5);
+      }
+    });
+
     it("protects only the first move of each side", () => {
       const rng = createSeededRng(1);
       let state = start(["c3"]);

@@ -75,6 +75,23 @@ describe("reshuffle", () => {
     expect(layout(3)).not.toEqual(layout(4));
   });
 
+  // 3.7: half-up on the reshuffle itself: 61 free squares × 0.5 = 30.5 → 31.
+  it("rounds half up when it places the mines", () => {
+    const game = gameFromScenario({
+      fen: ROOK,
+      noCaptureCount: 9,
+      config: { ...DEFAULT_CONFIG, mineDensity: 0.5 },
+    });
+    expect(play(game, "a4a5").state.hidden.mines.size).toBe(31);
+  });
+
+  // 3.1: safe start never comes back after a reshuffle.
+  it("does not restore the safe first move", () => {
+    const game = gameFromScenario({ fen: ROOK, noCaptureCount: 9 });
+    const { state } = play(game, "a4a5");
+    expect(state.hidden.safeStart).toEqual({ w: false, b: false });
+  });
+
   it("does not fire before the counter reaches 10", () => {
     const game = gameFromScenario({ fen: ROOK, noCaptureCount: 8 });
     const { state, events } = play(game, "a4a5");
