@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 
 /**
  * Logical (unscaled) window size in CSS px, side-by-side layout: 6 frame + 8 body padding +
- * 264 board (with rank gutter) + 4 gap + 88 move log wide; 446 tall.
+ * 264 board (with rank gutter) + 4 gap + 104 move log wide; 446 tall.
  */
-export const WINDOW_W = 370;
+export const WINDOW_W = 386;
 export const WINDOW_H = 446;
 /** Logical width of the stacked (phone) layout. */
 export const STACKED_W = 288;
