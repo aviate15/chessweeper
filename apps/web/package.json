@@ -9,10 +9,11 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "e2e": "vite build && playwright test"
+    "e2e": "VITE_SERVER_URL=ws://127.0.0.1:8787 vite build && playwright test"
   },
   "dependencies": {
     "@chessweeper/engine": "workspace:*",
+    "@chessweeper/protocol": "workspace:*",
     "@fontsource/silkscreen": "^5.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

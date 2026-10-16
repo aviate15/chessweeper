@@ -8,10 +8,13 @@ import { Px } from "./Px";
 export function GameOverDialog({
   gameOver,
   onNewGame,
+  onBackToLobby,
   onClose,
 }: {
   gameOver: GameOverView;
   onNewGame: () => void;
+  /** Online: replaces New game, which has no meaning without a rematch message. */
+  onBackToLobby?: () => void;
   onClose: () => void;
 }) {
   const status = gameOver.view.status;
@@ -34,10 +37,10 @@ export function GameOverDialog({
           className="btn"
           onClick={() => {
             playCue("click");
-            onNewGame();
+            (onBackToLobby ?? onNewGame)();
           }}
         >
-          New game
+          {onBackToLobby ? "Back to lobby" : "New game"}
         </button>
         <button
           type="button"

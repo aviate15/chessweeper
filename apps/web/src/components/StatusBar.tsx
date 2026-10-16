@@ -1,7 +1,16 @@
-import type { PublicView } from "@chessweeper/engine";
+import type { Color, PublicView } from "@chessweeper/engine";
 import { COLOR_NAME, narrate } from "../narration";
 
-export function StatusBar({ view, hint }: { view: PublicView; hint?: string | null }) {
+export function StatusBar({
+  view,
+  hint,
+  you,
+}: {
+  view: PublicView;
+  hint?: string | null;
+  /** Online: the viewer's own colour. */
+  you?: Color | null;
+}) {
   const last = view.log[view.log.length - 1];
   const narration = last ? narrate(last.events) : "Game started. White to move.";
   const turn =
@@ -15,6 +24,11 @@ export function StatusBar({ view, hint }: { view: PublicView; hint?: string | nu
       <span data-testid="status-turn">{turn}</span>
       <span className="status-sep"> | </span>
       <span data-testid="status-narration">{hint ?? narration}</span>
+      {you != null && (
+        <span data-testid="status-you">
+          <span className="status-sep"> | </span>You: {COLOR_NAME[you]}
+        </span>
+      )}
     </div>
   );
 }
