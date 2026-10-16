@@ -1,10 +1,4 @@
-import type {
-  EventView as EngineEventView,
-  GameOverView as EngineGameOverView,
-  GameSettings as EngineGameSettings,
-  LogEntryView as EngineLogEntryView,
-  PublicView as EnginePublicView,
-} from "@chessweeper/engine";
+import type { EventView, GameOverView, GameSettings, PublicView } from "@chessweeper/engine";
 import { z } from "zod";
 import { CODE_ALPHABET, CODE_LENGTH, MAX_TOKEN_CHARS } from "./client";
 import { ERROR_CODES, type ErrorCode } from "./errors";
@@ -32,57 +26,6 @@ export type ServerMessage =
   | { readonly type: "pong" }
   /** Placement round start / snapshot: clients derive the countdown from msLeft (manual mode). */
   | { readonly type: "placement"; readonly round: number; readonly msLeft: number };
-
-/**
- * Manual mine mode additions (design doc 3.10) that the engine types do not export yet.
- * TODO(reconcile with engine): replace with the engine's Phase, PublicView.placement,
- * GameSettings.mode, EventView variants and GameOverView.owned once they exist.
- */
-export type GameMode = "auto" | "manual";
-export type EventView = EngineEventView | PlacementEventView;
-export interface LogEntryView extends Omit<EngineLogEntryView, "events"> {
-  readonly events: readonly EventView[];
-}
-export type GameSettings = EngineGameSettings & { readonly mode?: GameMode | undefined };
-export type PublicView = Omit<EnginePublicView, "log" | "settings"> & {
-  readonly log: readonly LogEntryView[];
-  readonly settings: GameSettings;
-  readonly phase?: PhaseView | undefined;
-  readonly placement?: PlacementView | null | undefined;
-};
-export type GameOverView = Omit<EngineGameOverView, "view"> & {
-  readonly view: PublicView;
-  readonly owned?: OwnedMines | null | undefined;
-};
-export type PhaseView =
-  | { readonly kind: "play" }
-  | {
-      readonly kind: "placement";
-      readonly round: number;
-      readonly quota: number;
-      readonly ready: { readonly w: boolean; readonly b: boolean };
-    };
-export interface PlacementView {
-  readonly quota: number;
-  readonly ready: { readonly w: boolean; readonly b: boolean };
-  /** The viewer's own draft; null for spectators. */
-  readonly own: readonly number[] | null;
-}
-export type PlacementEventView =
-  | { readonly type: "PlacementStarted"; readonly round: number; readonly quota: number }
-  | { readonly type: "PlayerReady"; readonly color: "w" | "b" }
-  | { readonly type: "PlacementEnded"; readonly mineCount: number }
-  | {
-      readonly type: "BigMineBlasted";
-      readonly square: number;
-      readonly by: { readonly color: "w" | "b"; readonly type: "p" | "n" | "b" | "r" | "q" | "k" };
-      readonly area: readonly number[];
-    }
-  | { readonly type: "MinesAutoPlaced"; readonly color: "w" | "b"; readonly count: number };
-export interface OwnedMines {
-  readonly w: readonly number[];
-  readonly b: readonly number[];
-}
 
 const color = z.enum(["w", "b"]);
 const pieceType = z.enum(["p", "n", "b", "r", "q", "k"]);
@@ -142,7 +85,7 @@ const eventView = z.discriminatedUnion("type", [
 const settings = z.strictObject({
   reshuffleInterval: z.number().int().min(1),
   densityPercent: z.number().int().min(0).max(100),
-  // TODO(reconcile with engine): required once the engine's GameSettings carries mode.
+  // Omitted for auto games (engine GameSettings.mode is optional).
   mode: z.enum(["auto", "manual"]).optional(),
 });
 
@@ -185,7 +128,7 @@ const publicView = z.strictObject({
   inCheck: z.boolean(),
   log: z.array(z.strictObject({ color, events: z.array(eventView) })),
   fallen: z.strictObject({ w: fallen, b: fallen }),
-  // TODO(reconcile with engine): required once PublicView carries phase/placement.
+  // Manual mine mode only (3.10): both omitted in Auto games.
   phase: phase.optional(),
   placement: placement.nullable().optional(),
 });

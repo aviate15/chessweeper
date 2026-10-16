@@ -46,7 +46,7 @@ describe("manual mode client messages", () => {
     if (r.ok && r.message.type === "create_room") {
       expect(r.message.settings?.reshuffleInterval).toBeLessThanOrEqual(20);
       expect(r.message.settings?.densityPercent).toBeLessThanOrEqual(50);
-      // TODO(reconcile with engine): assert settings.mode === "manual" once clampSettings carries it.
+      expect(r.message.settings?.mode).toBe("manual");
     }
   });
   it("still enforces the frame size cap", () => {

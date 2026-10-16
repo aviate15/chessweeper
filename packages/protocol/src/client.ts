@@ -32,11 +32,8 @@ const settings = z
     // Manual mine mode (design doc 3.10). Absent means auto.
     mode: z.enum(["auto", "manual"]).optional(),
   })
-  .transform((raw) => {
-    const clamped = clampSettings(raw);
-    // TODO(reconcile with engine): once clampSettings carries `mode` (CONTRACT), drop this spread.
-    return raw.mode === undefined || "mode" in clamped ? clamped : { ...clamped, mode: raw.mode };
-  });
+  // clampSettings carries `mode`; it is omitted from the result for auto games.
+  .transform((raw) => clampSettings(raw));
 
 export const clientMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("create_room"), settings: settings.optional() }),
