@@ -29,6 +29,7 @@ import { MoveLog } from "./components/MoveLog";
 import { Px, spriteUrl } from "./components/Px";
 import { PromotionPicker } from "./components/PromotionPicker";
 import { StatusBar } from "./components/StatusBar";
+import { describeSquare } from "./narration";
 import { canOffer } from "./drawOffers";
 import {
   fxEndMs,
@@ -37,7 +38,18 @@ import {
   type Fx,
   type Presentation,
 } from "./presentation";
-import { loadFlip, saveFlip } from "./settings";
+import { OptionsDialog } from "./components/OptionsDialog";
+import { RulesDialog } from "./components/RulesDialog";
+import {
+  configFromOptions,
+  loadFlip,
+  loadOptions,
+  loadRulesHidden,
+  saveFlip,
+  saveOptions,
+  saveRulesHidden,
+  type GameOptions,
+} from "./settings";
 import { BUTTON_PRESSED, BUTTON_UP, CLOSE_BOX } from "./sprites";
 import { useFit } from "./useFit";
 import { useLocalGame } from "./useLocalGame";
@@ -60,7 +72,13 @@ export interface AppProps {
 }
 
 export function App({ rng, gate = true }: AppProps) {
-  const game = useLocalGame(rng ? { rng } : {});
+  const [options, setOptions] = useState<GameOptions>(loadOptions);
+  /** Number hint shown in the status bar after focusing or tapping a revealed square. */
+  const [hint, setHint] = useState<string | null>(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(() => !loadRulesHidden());
+  const config = useMemo(() => configFromOptions(options), [options]);
+  const game = useLocalGame(rng ? { rng, config } : { config });
   const { view, gameOver, turnId, lastEvents } = game;
   const [selected, setSelected] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
@@ -176,7 +194,17 @@ export function App({ rng, gate = true }: AppProps) {
     game.toggleFlag(square);
   };
 
+  const showHint = (square: Square) => {
+    setHint(describeSquare(view, square));
+  };
+
+  // Any new turn or game replaces the hint with the usual narration.
+  useEffect(() => {
+    setHint(null);
+  }, [turnId]);
+
   const onSquareClick = (square: Square) => {
+    showHint(square);
     if (over || gated) return;
     if (flagMode) {
       flagSquare(square);
@@ -214,6 +242,10 @@ export function App({ rng, gate = true }: AppProps) {
     setDismissedOver(false);
     setOrientation("w");
     setDismissedTurn(-1);
+  };
+
+  const openRules = () => {
+    setRulesOpen(true);
   };
 
   const toggleFlip = () => {
@@ -272,6 +304,10 @@ export function App({ rng, gate = true }: AppProps) {
             setMuted(!isMuted());
           }}
           onMoves={focusMoves}
+          onOptions={() => {
+            setOptionsOpen(true);
+          }}
+          onRules={openRules}
         />
         <InfoBar
           view={view}
@@ -281,6 +317,7 @@ export function App({ rng, gate = true }: AppProps) {
           gameOver={over}
           pendingDraw={game.offers.pending}
           onSmiley={newGame}
+          onRules={openRules}
           onFlagToggle={() => {
             setFlagMode((v) => !v);
           }}
@@ -298,19 +335,41 @@ export function App({ rng, gate = true }: AppProps) {
             fx={activeFx}
             fxKey={turnId * 2 + (phase === "post" ? 1 : 0)}
             onSquareClick={onSquareClick}
+            onSquareFocus={showHint}
             onSquareFlag={(sq) => {
               if (!over && !gated) flagSquare(sq);
             }}
           />
           <MoveLog view={view} logRef={logRef} />
         </div>
-        <StatusBar view={view} />
+        <StatusBar view={view} hint={hint} />
         {promotion !== null && (
           <PromotionPicker
             color={view.turn}
             onPick={onPromote}
             onCancel={() => {
               setPromotion(null);
+            }}
+          />
+        )}
+        {rulesOpen && (
+          <RulesDialog
+            config={config}
+            onClose={(dontShowAgain) => {
+              if (dontShowAgain) saveRulesHidden(true);
+              setRulesOpen(false);
+            }}
+          />
+        )}
+        {optionsOpen && (
+          <OptionsDialog
+            options={options}
+            onSave={(next) => {
+              setOptions(next);
+              saveOptions(next);
+            }}
+            onClose={() => {
+              setOptionsOpen(false);
             }}
           />
         )}

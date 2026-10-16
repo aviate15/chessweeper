@@ -3,6 +3,7 @@ import { LED_DIGITS, LED_KEYS } from "./led";
 import { LED_AMBER, LED_GREEN } from "./palette";
 import { PIECE_ORDER, PIECE_SPRITES } from "./pieces";
 import {
+  BADGE_SPRITES,
   EXPLOSION_FRAMES,
   FLAG,
   LIFE_CRACKED,
@@ -79,6 +80,11 @@ export const SPRITE_GROUPS: readonly SpriteGroup[] = [
     id: "numbers",
     title: "Numbers",
     entries: NUMBER_SPRITES.map((sprite, i) => ({ name: `Number ${String(i + 1)}`, sprite })),
+  },
+  {
+    id: "badges",
+    title: "Number badges",
+    entries: BADGE_SPRITES.map((sprite, i) => ({ name: `Badge ${String(i + 1)}`, sprite })),
   },
   {
     id: "marks",

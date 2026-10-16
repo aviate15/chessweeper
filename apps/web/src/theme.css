@@ -1,4 +1,4 @@
-/* Pixel-art skin (M11). Sizes are "logical" px: the window is zoomed by a whole number. */
+/* Pixel-art skin (M11). Sizes are "logical" px: the window is zoomed in half steps. */
 :root {
   --px-black: #000000;
   --px-white: #ffffff;
@@ -97,7 +97,7 @@ button {
 
 .window {
   position: relative;
-  width: 410px;
+  width: 370px;
   padding: 3px;
   background: var(--px-silver);
   box-shadow: var(--raised);
@@ -185,6 +185,10 @@ button {
   position: relative;
   height: 14px;
   display: flex;
+}
+
+.menu-root {
+  position: relative;
 }
 
 .menubar-title {
@@ -402,6 +406,12 @@ button {
   gap: 4px;
 }
 
+.tool-help {
+  min-width: 20px;
+  padding: 0 4px;
+  font-weight: 700;
+}
+
 .tool-icon {
   width: 16px;
   height: 16px;
@@ -479,10 +489,9 @@ button {
   pointer-events: none;
 }
 
-.layer-corner {
-  inset: auto -3px -2px auto;
-  width: 16px;
-  height: 16px;
+/* Number badge: the sprite already sits in the bottom-right corner of its 16x16 cell. */
+.layer-badge {
+  z-index: 1;
 }
 
 .piece {
@@ -492,14 +501,42 @@ button {
 }
 
 /* ---- Move log ---- */
+.log-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: none;
+  width: 88px;
+  height: calc(var(--square) * 8 + 8px);
+}
+
+.log-legend {
+  display: flex;
+  align-items: flex-start;
+  gap: 3px;
+  margin: 0;
+  color: var(--px-dark-gray);
+}
+
+.legend-badge {
+  flex: none;
+  width: 14px;
+  height: 18px;
+}
+
 .movelog {
   flex: 1;
   min-width: 0;
-  height: calc(var(--square) * 8 + 8px);
+  min-height: 0;
   overflow-y: auto;
   padding: 3px 4px;
   background: var(--px-white);
   box-shadow: var(--sunken);
+}
+
+.window-stacked .log-col {
+  width: 100%;
+  height: auto;
 }
 
 .window-stacked .movelog {
@@ -808,4 +845,108 @@ button {
   .fx-frame {
     opacity: 0;
   }
+}
+
+/* ---- Options dialog ---- */
+.options-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.retro-select {
+  font: inherit;
+  font-size: 8px;
+  color: var(--px-black);
+  background: var(--px-white);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--sunken);
+  padding: 2px 3px;
+}
+
+.dialog-note {
+  color: var(--px-dark-gray);
+}
+
+/* ---- Rules dialog ---- */
+.dialog.dialog-rules {
+  width: 330px;
+}
+
+.rules-scroll {
+  max-height: 310px;
+  overflow-y: auto;
+  padding: 4px 6px;
+  background: var(--px-white);
+  box-shadow: var(--sunken);
+}
+
+.rules-scroll:focus-visible {
+  outline: 1px dotted var(--px-black);
+  outline-offset: -3px;
+}
+
+.rules-scroll h3 {
+  margin: 8px 0 3px;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--px-navy);
+}
+
+.rules-scroll h3:first-child {
+  margin-top: 0;
+}
+
+.rules-scroll p,
+.rules-scroll ul {
+  margin: 0 0 4px;
+}
+
+.rules-scroll ul {
+  padding-left: 12px;
+}
+
+.rules-scroll li {
+  margin-bottom: 2px;
+}
+
+.rules-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.rules-example {
+  margin: 0;
+  width: 96px;
+}
+
+.rules-example figcaption {
+  margin-top: 2px;
+  color: var(--px-dark-gray);
+}
+
+.mini-board {
+  display: grid;
+  width: max-content;
+  box-shadow: var(--sunken);
+}
+
+.mini-cell {
+  width: var(--square);
+  height: var(--square);
+  position: relative;
+  pointer-events: none;
+}
+
+.rules-hide {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  cursor: pointer;
 }

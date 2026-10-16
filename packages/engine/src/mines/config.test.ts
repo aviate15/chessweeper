@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG, mineCountFor } from "./config";
+import { DEFAULT_CONFIG, DEFAULT_RESHUFFLE_INTERVAL, mineCountFor } from "./config";
 
 describe("mineCountFor", () => {
   // 3.1: 25% of the 32 squares on ranks 3-6 is 8 mines.
@@ -17,5 +17,13 @@ describe("mineCountFor", () => {
   it("applies the cap and a custom density", () => {
     expect(mineCountFor(60, { ...DEFAULT_CONFIG, mineCap: 10 })).toBe(10);
     expect(mineCountFor(32, { ...DEFAULT_CONFIG, mineDensity: 0.5 })).toBe(16);
+  });
+});
+
+// 3.7: the reshuffle interval default is 8 total turns (4 per player).
+describe("DEFAULT_CONFIG", () => {
+  it("reshuffles every 8 turns", () => {
+    expect(DEFAULT_RESHUFFLE_INTERVAL).toBe(8);
+    expect(DEFAULT_CONFIG.reshuffleInterval).toBe(8);
   });
 });

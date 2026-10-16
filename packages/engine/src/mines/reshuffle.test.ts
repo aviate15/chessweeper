@@ -20,10 +20,10 @@ describe("reshuffle", () => {
       revealed: ["b6", "h8"],
       craters: ["c3"],
       lives: { w: 2, b: 3 },
-      noCaptureCount: 5,
+      noCaptureCount: 7,
     });
 
-  it("fires when the counter reaches 6, then resets everything", () => {
+  it("fires when the counter reaches 8, then resets everything", () => {
     const { state, events } = play(due(), "a4a5");
     expect(eventTypes(events).slice(-2)).toEqual(["TurnPassed", "Reshuffled"]);
     expect(state.public.noCaptureCount).toBe(0);
@@ -45,13 +45,13 @@ describe("reshuffle", () => {
   it("grows denser with fewer pieces and respects the cap", () => {
     const dense = gameFromScenario({
       fen: "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
-      noCaptureCount: 5,
+      noCaptureCount: 7,
       config: { ...DEFAULT_CONFIG, mineDensity: 0.5 },
     });
     expect(play(dense, "e1e2").state.hidden.mines.size).toBe(31); // 62 free × 0.5
     const capped = gameFromScenario({
       fen: "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
-      noCaptureCount: 5,
+      noCaptureCount: 7,
       config: { ...DEFAULT_CONFIG, mineDensity: 0.5, mineCap: 10 },
     });
     expect(play(capped, "e1e2").state.hidden.mines.size).toBe(10);
@@ -79,7 +79,7 @@ describe("reshuffle", () => {
   it("rounds half up when it places the mines", () => {
     const game = gameFromScenario({
       fen: ROOK,
-      noCaptureCount: 5,
+      noCaptureCount: 7,
       config: { ...DEFAULT_CONFIG, mineDensity: 0.5 },
     });
     expect(play(game, "a4a5").state.hidden.mines.size).toBe(31);
@@ -87,20 +87,20 @@ describe("reshuffle", () => {
 
   // 3.1: safe start never comes back after a reshuffle.
   it("does not restore the safe first move", () => {
-    const game = gameFromScenario({ fen: ROOK, noCaptureCount: 5 });
+    const game = gameFromScenario({ fen: ROOK, noCaptureCount: 7 });
     const { state } = play(game, "a4a5");
     expect(state.hidden.safeStart).toEqual({ w: false, b: false });
   });
 
-  it("does not fire before the counter reaches 6", () => {
-    const game = gameFromScenario({ fen: ROOK, noCaptureCount: 4 });
+  it("does not fire before the counter reaches 8", () => {
+    const game = gameFromScenario({ fen: ROOK, noCaptureCount: 6 });
     const { state, events } = play(game, "a4a5");
     expect(reshuffled(events)).toBe(false);
-    expect(state.public.noCaptureCount).toBe(5);
+    expect(state.public.noCaptureCount).toBe(7);
   });
 
   it("does not fire on a capture turn", () => {
-    const game = gameFromScenario({ fen: "4k3/8/8/8/R6p/8/8/4K3 w - - 0 1", noCaptureCount: 5 });
+    const game = gameFromScenario({ fen: "4k3/8/8/8/R6p/8/8/4K3 w - - 0 1", noCaptureCount: 7 });
     expect(reshuffled(play(game, "a4h4").events)).toBe(false);
   });
 });
@@ -108,31 +108,31 @@ describe("reshuffle", () => {
 describe("reshuffle timing (3.7, 3.8 step 8)", () => {
   // 3.7: only if the game continues.
   it("does not fire on the turn that ends the game by checkmate", () => {
-    const game = gameFromScenario({ fen: "6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1", noCaptureCount: 5 });
+    const game = gameFromScenario({ fen: "6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1", noCaptureCount: 7 });
     const { state, events } = play(game, "a1a8");
     expect(state.public.status.kind).toBe("over");
     expect(reshuffled(events)).toBe(false);
-    expect(state.public.noCaptureCount).toBe(5);
+    expect(state.public.noCaptureCount).toBe(7);
   });
 
   it("does not fire on a stalemate or a king death", () => {
-    const stale = gameFromScenario({ fen: "7k/8/6K1/8/8/8/8/5Q2 w - - 0 1", noCaptureCount: 5 });
+    const stale = gameFromScenario({ fen: "7k/8/6K1/8/8/8/8/5Q2 w - - 0 1", noCaptureCount: 7 });
     expect(reshuffled(play(stale, "f1f7").events)).toBe(false);
     const dead = gameFromScenario({
       fen: "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
       mines: ["e2"],
       lives: { w: 1, b: 3 },
-      noCaptureCount: 5,
+      noCaptureCount: 7,
     });
     expect(reshuffled(play(dead, "e1e2").events)).toBe(false);
   });
 
   // 3.7: after the whole check-exception chain, not before.
   it("waits for the check-exception chain to finish", () => {
-    const game = gameFromScenario({ fen: BLOCK, mines: ["e4"], noCaptureCount: 5 });
+    const game = gameFromScenario({ fen: BLOCK, mines: ["e4"], noCaptureCount: 7 });
     const pending = play(game, "a8e4");
     expect(reshuffled(pending.events)).toBe(false);
-    expect(pending.state.public.noCaptureCount).toBe(5);
+    expect(pending.state.public.noCaptureCount).toBe(7);
     const done = play(pending.state, "e8d8");
     expect(reshuffled(done.events)).toBe(true);
     expect(done.state.public.noCaptureCount).toBe(0);

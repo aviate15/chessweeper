@@ -119,7 +119,7 @@ describe("toPublicView", () => {
   // 3.7: public countdown to the next reshuffle.
   it("reports turns until the reshuffle", () => {
     const game = gameFromScenario({ fen: START_FEN, noCaptureCount: 2 });
-    expect(toPublicView(game, null).turnsUntilReshuffle).toBe(4);
+    expect(toPublicView(game, null).turnsUntilReshuffle).toBe(6);
   });
 
   // 3.7, 3.4: a check-exception chain is one turn, so the countdown stays frozen until it ends.
@@ -129,13 +129,13 @@ describe("toPublicView", () => {
       mines: ["e4"],
       noCaptureCount: 2,
     });
-    expect(toPublicView(game, null).turnsUntilReshuffle).toBe(4);
+    expect(toPublicView(game, null).turnsUntilReshuffle).toBe(6);
     const chain = play(game, "a8e4").state;
     expect(chain.public.checkException).toBe("b");
-    expect(toPublicView(chain, null).turnsUntilReshuffle).toBe(4);
+    expect(toPublicView(chain, null).turnsUntilReshuffle).toBe(6);
     const done = play(chain, "e8d8").state;
     expect(done.public.checkException).toBeNull();
-    expect(toPublicView(done, null).turnsUntilReshuffle).toBe(3);
+    expect(toPublicView(done, null).turnsUntilReshuffle).toBe(5);
   });
 
   it("reports the viewer, turn and check", () => {

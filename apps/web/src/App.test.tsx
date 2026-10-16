@@ -1,5 +1,5 @@
 import { createSeededRng } from "@chessweeper/engine";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -21,6 +21,7 @@ const playFirstMove = async (user: ReturnType<typeof userEvent.setup>, container
 
 beforeEach(() => {
   localStorage.clear();
+  localStorage.setItem("chessweeper.rulesHidden", "1");
 });
 
 afterEach(() => {
@@ -41,7 +42,7 @@ describe("App", () => {
       "wk",
     );
     expect(screen.getByTestId("mine-count")).toHaveTextContent("8");
-    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("6");
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("8");
     expect(screen.getByTestId("lives-w")).toHaveTextContent("3");
     expect(screen.getByTestId("lives-b")).toHaveTextContent("3");
     // No mine marker and no number before anything is revealed.
@@ -200,5 +201,89 @@ describe("App", () => {
     await openGameMenu(user);
     await user.click(screen.getByRole("menuitem", { name: "Moves" }));
     expect(screen.getByRole("region", { name: "Moves" })).toHaveFocus();
+  });
+});
+
+describe("Game > Options", () => {
+  it("applies the saved interval and density at the next New game, not mid-game", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App rng={createSeededRng(5)} />);
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("8");
+    await playFirstMove(user, container);
+    await user.click(screen.getByRole("button", { name: "Ready" }));
+    await openGameMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Options..." }));
+    const dialog = screen.getByRole("dialog", { name: "Options" });
+    await user.selectOptions(screen.getByLabelText("Reshuffle every"), "5");
+    await user.selectOptions(screen.getByLabelText("Mine density"), "50");
+    expect(screen.getByTestId("options-mines")).toHaveTextContent("Starting mines: 16");
+    expect(dialog).toHaveTextContent("Applies at the next New game.");
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    // The running game is untouched.
+    expect(screen.getByTestId("mine-count")).toHaveTextContent("8");
+    expect(screen.getByTestId("reshuffle-count")).not.toHaveTextContent("5");
+    await openGameMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "New game" }));
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("5");
+    expect(screen.getByTestId("mine-count")).toHaveTextContent("16");
+    expect(localStorage.getItem("chessweeper.options")).toContain("50");
+  });
+
+  it("resets to defaults", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(
+      "chessweeper.options",
+      JSON.stringify({ reshuffleInterval: 3, densityPercent: 10 }),
+    );
+    render(<App rng={createSeededRng(5)} />);
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("3");
+    await openGameMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "Options..." }));
+    await user.click(screen.getByRole("button", { name: "Reset to defaults" }));
+    expect(screen.getByTestId("options-mines")).toHaveTextContent("Starting mines: 8");
+  });
+});
+
+describe("Rules dialog", () => {
+  it("shows on first load, uses the live config, and Don't show again persists", async () => {
+    const user = userEvent.setup();
+    localStorage.removeItem("chessweeper.rulesHidden");
+    const first = render(<App rng={createSeededRng(2)} />);
+    const dialog = screen.getByRole("dialog", { name: "Rules" });
+    expect(dialog).toHaveTextContent("After 8 turns in a row without a capture");
+    expect(dialog).toHaveTextContent("25% of the empty squares");
+    expect(dialog.querySelectorAll(".mini-board").length).toBeGreaterThanOrEqual(3);
+    // Plain close does not persist: it shows again on the next load.
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    expect(screen.queryByRole("dialog", { name: "Rules" })).toBeNull();
+    expect(localStorage.getItem("chessweeper.rulesHidden")).toBeNull();
+    first.unmount();
+
+    render(<App rng={createSeededRng(2)} />);
+    await user.click(screen.getByLabelText("Don't show again"));
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    expect(localStorage.getItem("chessweeper.rulesHidden")).toBe("1");
+    cleanup();
+
+    render(<App rng={createSeededRng(2)} />);
+    expect(screen.queryByRole("dialog", { name: "Rules" })).toBeNull();
+  });
+
+  it("opens from Help > Rules and from the ? button, with the saved interval", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(
+      "chessweeper.options",
+      JSON.stringify({ reshuffleInterval: 4, densityPercent: 30 }),
+    );
+    render(<App rng={createSeededRng(2)} />);
+    expect(screen.queryByRole("dialog", { name: "Rules" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Help" }));
+    await user.click(screen.getByRole("menuitem", { name: "Rules" }));
+    const dialog = screen.getByRole("dialog", { name: "Rules" });
+    expect(dialog).toHaveTextContent("After 4 turns in a row without a capture");
+    expect(dialog).toHaveTextContent("30% of the empty squares");
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    await user.click(screen.getByRole("button", { name: "Rules" }));
+    expect(screen.getByRole("dialog", { name: "Rules" })).toBeInTheDocument();
   });
 });

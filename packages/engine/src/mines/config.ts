@@ -9,11 +9,14 @@ export interface GameConfig {
   readonly reshuffleInterval: number;
 }
 
+/** Turns without a capture before a reshuffle (3.7). The single named default; tunable. */
+export const DEFAULT_RESHUFFLE_INTERVAL = 8;
+
 export const DEFAULT_CONFIG: GameConfig = {
   mineDensity: 0.25,
   mineCap: null,
   kingLives: 3,
-  reshuffleInterval: 6,
+  reshuffleInterval: DEFAULT_RESHUFFLE_INTERVAL,
 };
 
 /**
