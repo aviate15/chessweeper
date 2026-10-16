@@ -186,13 +186,15 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 8-turn full res
 - Hooks: format/lint after edits; typecheck before commits. Subagent: read-only rules auditor that checks the engine against this file. Permission allowlist for routine `npm`/`git`/`gh`.
 - CLAUDE.md rule: mechanics live in `docs/GAME_DESIGN.md`; never invent rules; ask first.
 - `[D]` Architecture: server-authoritative hidden state; one pure TypeScript rules engine shared by server and browser; pnpm-workspaces monorepo with TypeScript everywhere (`packages/engine`, `apps/web`, `apps/server`).
-- `[D]` Hosting (delegated to Claude by Aviate): small Node + `ws` WebSocket server on Fly.io (app `chessweeper-server`, region `sin`, a single instance because rooms are in memory); static web client on Vercel (picked 2026-10-16). See `docs/DEPLOY.md`. Operational detail, not a rule: a room is freed 2 minutes after its game ends. For now (2026-10-16) games run from Aviate's laptop, shared through a free Cloudflare quick tunnel with the server also serving the web app on one URL (`pnpm play`, `docs/PLAY_ONLINE.md`); Fly.io and Vercel stay documented for later.
+- `[D]` Hosting (delegated to Claude by Aviate): small Node + `ws` WebSocket server on Fly.io (app `chessweeper-server`, region `sin`, a single instance because rooms are in memory); static web client on Vercel (picked 2026-10-16). See `docs/DEPLOY.md`. Operational detail, not a rule: a room is freed 2 minutes after its game ends. For now (2026-10-16) games run from Aviate's laptop, shared through a free public tunnel (Cloudflare quick tunnel, with SSH-based fallbacks) with the server also serving the web app on one URL (`pnpm play`, `docs/PLAY_ONLINE.md`); Fly.io and Vercel stay documented for later.
 - `[D]` UI framework: Vite + React, rendered with DOM/CSS and hand-rolled bevels. Add a canvas overlay only if an animation needs it.
 - Custom rules engine likely needed: destruction, lives and reshuffles conflict with off-the-shelf chess legality libraries.
 
 ---
 
 ## 8. Change log
+
+- 2026-10-16: `pnpm play` falls back across tunnel services (cloudflared, Pinggy, localhost.run, ngrok) because some networks block Cloudflare's port. Hosting only, no rule changes.
 
 - 2026-10-16: Hosting for now is the laptop plus a free Cloudflare quick tunnel (`pnpm play`); Fly.io and Vercel are kept for later. Single URL: the server serves the built web app and the WebSocket (`/ws`). No rule changes.
 

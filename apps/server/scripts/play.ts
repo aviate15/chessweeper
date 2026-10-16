@@ -1,32 +1,47 @@
 /**
  * `pnpm play`: serve the game and the built web app from this machine and, unless --local,
- * expose it with a free Cloudflare quick tunnel (cloudflared, no account) so friends can join.
- * See docs/PLAY_ONLINE.md.
+ * expose it through a free public tunnel so friends can join. See docs/PLAY_ONLINE.md.
  *
- *   pnpm play              # tunnel + server, prints the public URL
- *   pnpm play --local      # no tunnel, http://localhost:<port> only
- *   pnpm play --verbose    # also show cloudflared's own log
+ *   pnpm play                       # try tunnels in order until one works
+ *   pnpm play --tunnel pinggy       # only one: cloudflared | pinggy | localhost.run | ngrok
+ *   pnpm play --local               # no tunnel, http://localhost:<port> only
+ *   pnpm play --verbose             # also show the tunnel tools' own output
  *
- * Order matters: cloudflared starts first so its random URL is known, and the server is then
- * started with exactly that origin allowed (exact-match allowlist, nothing loosened).
+ * For each tunnel: start it, read its public URL, start the server allowing exactly that origin
+ * (exact-match allowlist, nothing loosened), then check the public /healthz. If the link does
+ * not work (for example the network blocks that tunnel), stop it and try the next one.
  */
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer as createNetServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { pickTunnels, tunnelChoice, type TunnelContext, type TunnelProvider } from "../src/tunnels";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
-const args = new Set(process.argv.slice(2));
-const local = args.has("--local");
-const verbose = args.has("--verbose");
+const argv = process.argv.slice(2);
+const local = argv.includes("--local");
+const verbose = argv.includes("--verbose");
 const port = Number(process.env.PLAY_PORT ?? "8080");
-const children: ChildProcess[] = [];
+const ngrokDomain = process.env.NGROK_DOMAIN?.trim() ?? "";
+
+const forever: ChildProcess[] = [];
+let attempt: ChildProcess[] = [];
+let sshDir: string | null = null;
 let stopping = false;
+let running = false;
+
+function killAll(list: ChildProcess[]): void {
+  for (const child of list) child.kill("SIGTERM");
+}
 
 function stop(code: number): never {
   if (!stopping) {
     stopping = true;
-    for (const child of children) child.kill("SIGTERM");
+    killAll(attempt);
+    killAll(forever);
+    if (sshDir !== null) rmSync(sshDir, { recursive: true, force: true });
     console.log("\nStopped. The public link is dead and live games are gone.");
   }
   process.exit(code);
@@ -54,7 +69,10 @@ function portIsFree(): Promise<boolean> {
 
 async function healthy(base: string): Promise<boolean> {
   try {
-    const res = await fetch(`${base}/healthz`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${base}/healthz`, {
+      signal: AbortSignal.timeout(4000),
+      headers: { "ngrok-skip-browser-warning": "1" },
+    });
     return res.ok && (await res.text()) === "ok";
   } catch {
     return false;
@@ -70,40 +88,106 @@ async function waitHealthy(base: string, seconds: number): Promise<boolean> {
   return false;
 }
 
-function startTunnel(): Promise<string> {
+function hasBinary(bin: string): boolean {
+  return spawnSync("sh", ["-c", `command -v ${bin}`], { stdio: "ignore" }).status === 0;
+}
+
+/** A throwaway SSH key and known_hosts for the SSH tunnels; removed on exit. */
+function makeSshDir(): string {
+  if (sshDir !== null) return sshDir;
+  const dir = mkdtempSync(join(tmpdir(), "chessweeper-ssh-"));
+  const made = spawnSync("ssh-keygen", ["-q", "-t", "ed25519", "-N", "", "-f", join(dir, "key")], {
+    stdio: "ignore",
+  });
+  if (made.status !== 0) {
+    rmSync(dir, { recursive: true, force: true });
+    throw new Error("could not create a temporary SSH key");
+  }
+  sshDir = dir;
+  return dir;
+}
+
+/** Starts one tunnel and resolves with its public URL, or rejects with the reason. */
+function startTunnel(provider: TunnelProvider, ctx: TunnelContext): Promise<string> {
   return new Promise((resolve, reject) => {
-    const tunnel = spawn(
-      "cloudflared",
-      ["tunnel", "--no-autoupdate", "--url", `http://127.0.0.1:${String(port)}`],
-      { stdio: ["ignore", "pipe", "pipe"] },
-    );
-    children.push(tunnel);
-    const timer = setTimeout(() => {
-      reject(new Error("cloudflared did not report a public URL within 30 seconds."));
-    }, 30_000);
+    const child = spawn(provider.bin, [...provider.args(ctx)], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    attempt.push(child);
     let found = false;
+    const timer = setTimeout(() => {
+      reject(new Error("no public URL within 30 seconds"));
+    }, 30_000);
     const onData = (chunk: Buffer): void => {
       const text = chunk.toString("utf8");
       if (verbose) process.stderr.write(text);
-      const match = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(text);
-      if (match !== null && !found) {
+      const url = provider.findUrl(text);
+      if (url !== null && !found) {
         found = true;
         clearTimeout(timer);
-        resolve(match[0]);
+        resolve(url);
       }
     };
-    tunnel.stdout.on("data", onData);
-    tunnel.stderr.on("data", onData);
-    tunnel.once("exit", (code) => {
-      if (!found) {
-        clearTimeout(timer);
-        reject(new Error(`cloudflared exited early (code ${String(code)}). Run with --verbose.`));
-      } else {
-        fail("cloudflared stopped, so the public link no longer works.");
-      }
+    child.stdout.on("data", onData);
+    child.stderr.on("data", onData);
+    child.once("error", (e) => {
+      clearTimeout(timer);
+      reject(e);
+    });
+    child.once("exit", (code) => {
+      clearTimeout(timer);
+      if (!found) reject(new Error(`exited early (code ${String(code)})`));
+      else if (running)
+        fail(`The ${provider.label} tunnel stopped, so the public link no longer works.`);
     });
   });
 }
+
+function startServer(origins: string[], cloudflareHeaders: boolean): ChildProcess {
+  const server = spawn("node", [`${root}apps/server/dist/main.js`], {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      NODE_ENV: "production",
+      HOST: "127.0.0.1",
+      PORT: String(port),
+      STATIC_DIR: `${root}apps/web/dist`,
+      // Only Cloudflare adds CF-Connecting-IP. Other tunnels are not trusted for client IPs, so
+      // their visitors share the per-IP limits (the socket address is the local tunnel client).
+      TRUST_PROXY: cloudflareHeaders ? "cloudflare" : "none",
+      ALLOWED_ORIGINS: origins.join(","),
+      MAX_ROOMS: process.env.MAX_ROOMS ?? "200",
+    },
+  });
+  attempt.push(server);
+  server.once("exit", (code) => {
+    if (running && !stopping) fail(`The game server stopped (code ${String(code)}).`);
+  });
+  return server;
+}
+
+function banner(link: string, note: string | null): void {
+  const line = "=".repeat(64);
+  const mac = process.platform === "darwin";
+  console.log(`\n${line}`);
+  console.log("Chessweeper is up.\n");
+  console.log(`  ${local ? "Local link" : "Public link"}: ${link}${mac ? "   (copied)" : ""}`);
+  if (!local) console.log(`  On this machine:  http://localhost:${String(port)}`);
+  console.log("\nHow to play:");
+  console.log("  1. Open the link, then Game > Online... > Create game.");
+  console.log("  2. Click Copy link and send it to your friend (or give them the code).");
+  console.log("  3. Your friend opens it and the game starts.\n");
+  if (note !== null) console.log(`Note: ${note}\n`);
+  console.log("Keep this window open. Press Ctrl+C to stop. Closing the lid puts the laptop to");
+  console.log("sleep and ends the games. The link changes every time you run this.");
+  console.log(`${line}\n`);
+}
+
+const NOTES: Readonly<Record<string, string>> = {
+  pinggy: "Pinggy's free tunnels end after 60 minutes. Restart to get a new link.",
+  "localhost.run": "localhost.run's free links change after a few hours.",
+  ngrok: "Friends may see an ngrok warning page once; they click Visit Site.",
+};
 
 async function main(): Promise<void> {
   process.on("SIGINT", () => {
@@ -124,79 +208,76 @@ async function main(): Promise<void> {
     fail(`Port ${String(port)} is busy. Stop whatever uses it or set PLAY_PORT=<other port>.`);
   }
 
-  let publicUrl: string | null = null;
-  if (!local) {
-    if (spawnSync("cloudflared", ["--version"], { stdio: "ignore" }).status !== 0) {
-      fail("cloudflared is not installed. Run: brew install cloudflared");
-    }
-    console.log("Starting the tunnel...");
-    try {
-      publicUrl = await startTunnel();
-    } catch (e) {
-      fail(e instanceof Error ? e.message : "Could not start the tunnel.");
-    }
-  }
-
   const localUrl = `http://localhost:${String(port)}`;
-  const origins = [localUrl, `http://127.0.0.1:${String(port)}`];
-  if (publicUrl !== null) origins.unshift(publicUrl);
+  const localOrigins = [localUrl, `http://127.0.0.1:${String(port)}`];
 
-  const server = spawn("node", [`${root}apps/server/dist/main.js`], {
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      NODE_ENV: "production",
-      HOST: "127.0.0.1",
-      PORT: String(port),
-      STATIC_DIR: `${root}apps/web/dist`,
-      TRUST_PROXY: local ? "none" : "cloudflare",
-      ALLOWED_ORIGINS: origins.join(","),
-      MAX_ROOMS: process.env.MAX_ROOMS ?? "200",
-    },
-  });
-  children.push(server);
-  server.once("exit", (code) => {
-    fail(`The game server stopped (code ${String(code)}).`);
-  });
+  let link = localUrl;
+  let note: string | null = null;
 
-  if (!(await waitHealthy(localUrl, 15))) fail("The game server did not start.");
-
-  if (publicUrl !== null) {
-    console.log("Waiting for the public link to come up (new tunnels take a few seconds)...");
-    if (!(await waitHealthy(publicUrl, 60))) {
+  if (local) {
+    startServer(localOrigins, false);
+    if (!(await waitHealthy(localUrl, 15))) fail("The game server did not start.");
+  } else {
+    const choice = tunnelChoice(argv);
+    const providers = pickTunnels(choice);
+    if (providers === null) {
+      fail("Unknown --tunnel. Use auto, cloudflared, pinggy, localhost.run or ngrok.");
+    }
+    const tried: string[] = [];
+    let ok = false;
+    for (const provider of providers) {
+      if (!hasBinary(provider.bin)) {
+        tried.push(`${provider.id}: ${provider.bin} is not installed`);
+        continue;
+      }
+      process.stdout.write(`Trying ${provider.label}... `);
+      attempt = [];
+      try {
+        const ctx: TunnelContext = {
+          port,
+          sshDir: provider.bin === "ssh" ? makeSshDir() : "",
+          ngrokDomain: ngrokDomain === "" ? null : ngrokDomain,
+        };
+        const url = await startTunnel(provider, ctx);
+        startServer([url, ...localOrigins], provider.cloudflareHeaders);
+        if (!(await waitHealthy(localUrl, 15))) throw new Error("the game server did not start");
+        if (!(await waitHealthy(url, 30))) throw new Error("the public link did not answer");
+        console.log("works.");
+        forever.push(...attempt);
+        link = url;
+        note = NOTES[provider.id] ?? null;
+        ok = true;
+        break;
+      } catch (e) {
+        const reason = e instanceof Error ? e.message : "failed";
+        console.log(`no (${reason}).`);
+        tried.push(`${provider.id}: ${reason}`);
+        killAll(attempt);
+        attempt = [];
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+    if (!ok) {
       fail(
         [
-          "The public link never came up, so friends could not reach you.",
-          "cloudflared needs outbound access to Cloudflare on port 7844 (UDP, or TCP as a fallback).",
-          "Some networks block it (campus, work, hotel wifi, VPNs, firewalls). Try another network",
-          "or a phone hotspot. Run `pnpm play --verbose` to see cloudflared's own log.",
-          "You can still play on this machine with `pnpm play --local`.",
+          "No public tunnel worked, so friends could not reach you:",
+          ...tried.map((t) => `  - ${t}`),
+          "",
+          "Your network probably blocks these. Try another network or a phone hotspot,",
+          "set up ngrok (docs/PLAY_ONLINE.md), run with --verbose to see the tools' output,",
+          "or play on this machine with `pnpm play --local`.",
         ].join("\n"),
       );
     }
   }
 
-  const link = publicUrl ?? localUrl;
+  running = true;
   if (process.platform === "darwin") {
     spawnSync("pbcopy", { input: link });
     // Keep the laptop awake (idle sleep) for as long as this command runs.
-    children.push(spawn("caffeinate", ["-i", "-w", String(process.pid)], { stdio: "ignore" }));
+    forever.push(spawn("caffeinate", ["-i", "-w", String(process.pid)], { stdio: "ignore" }));
   }
-
-  const line = "=".repeat(64);
-  console.log(`\n${line}`);
-  console.log("Chessweeper is up.\n");
-  console.log(
-    `  ${local ? "Local link" : "Public link"}: ${link}${process.platform === "darwin" ? "   (copied)" : ""}`,
-  );
-  if (publicUrl !== null) console.log(`  On this machine:  ${localUrl}`);
-  console.log("\nHow to play:");
-  console.log("  1. Open the link, then Game > Online... > Create game.");
-  console.log("  2. Click Copy link and send it to your friend (or give them the code).");
-  console.log("  3. Your friend opens it and the game starts.\n");
-  console.log("Keep this window open. Press Ctrl+C to stop. Closing the lid puts the laptop to");
-  console.log("sleep and ends the games. The link changes every time you run this.");
-  console.log(`${line}\n`);
+  banner(link, note);
 }
 
 await main();
