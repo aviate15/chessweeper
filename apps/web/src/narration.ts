@@ -41,7 +41,9 @@ export function narrate(events: readonly EventView[]): string {
     switch (e.type) {
       case "MoveMade": {
         const m = e.move;
-        const hitMine = events.some((x) => x.type === "MineTriggered" && x.square === m.to);
+        const hitMine = events.some(
+          (x) => (x.type === "MineTriggered" || x.type === "BigMineBlasted") && x.square === m.to,
+        );
         const who = `${COLOR_NAME[e.color]}'s ${PIECE_NAME[m.piece]}`;
         if (m.castle !== null) parts.push(`${COLOR_NAME[e.color]} castled ${m.castle}side`);
         else if (hitMine) break;
@@ -64,6 +66,14 @@ export function narrate(events: readonly EventView[]): string {
         );
         break;
       }
+      case "BigMineBlasted":
+        parts.push(
+          `${COLOR_NAME[e.by.color]}'s ${PIECE_NAME[e.by.type]} set off a big mine on ${squareName(e.square)}`,
+        );
+        break;
+      case "PlacementStarted":
+        parts.push("Mines cleared. Both players place new mines");
+        break;
       case "LifeLost":
         parts.push(`${COLOR_NAME[e.color]}'s king lost a life (${String(e.livesLeft)} left)`);
         break;
@@ -81,6 +91,8 @@ export function narrate(events: readonly EventView[]): string {
       case "NumberRevealed":
       case "NumbersChanged":
       case "TurnPassed":
+      case "PlayerReady":
+      case "PlacementEnded":
         break;
     }
   }

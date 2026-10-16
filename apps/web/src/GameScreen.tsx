@@ -25,9 +25,10 @@ import { ConfirmDialog, type ConfirmKind } from "./components/ConfirmDialog";
 import { ConnectionBanner } from "./components/ConnectionBanner";
 import { GameOverDialog } from "./components/GameOverDialog";
 import { HandoffScreen } from "./components/HandoffScreen";
-import { faceFor, InfoBar } from "./components/InfoBar";
+import { DrawOfferBar, faceFor, InfoBar } from "./components/InfoBar";
 import { MenuBar } from "./components/MenuBar";
 import { MoveLog } from "./components/MoveLog";
+import { PlacementScreen } from "./components/PlacementScreen";
 import { Px, spriteUrl } from "./components/Px";
 import { PromotionPicker } from "./components/PromotionPicker";
 import { WaitingRoom } from "./components/WaitingRoom";
@@ -126,6 +127,12 @@ export function GameScreen({
   const soundOn = !useSyncExternalStore(subscribeMuted, isMuted);
 
   const over = view.status.kind === "over";
+  /** Manual mine mode (3.10): a placement round replaces the board and info bar. */
+  const placing = !over && game.placement !== null && view.placement !== null;
+  const autoPlacedText =
+    game.autoPlaced !== null && game.autoPlaced > 0
+      ? `${String(game.autoPlaced)} ${game.autoPlaced === 1 ? "mine was" : "mines were"} placed at random for you`
+      : null;
   const phase0 = online?.phase ?? null;
   const reducedMotion = useMemo(() => prefersReducedMotion(), []);
 
@@ -239,6 +246,21 @@ export function GameScreen({
   useEffect(() => {
     setHint(null);
   }, [turnId]);
+
+  /** Manual placement: toggle one of my mines; a full quota only explains itself. */
+  const onPlacementToggle = (square: Square) => {
+    const info = view.placement;
+    if (info === null) return;
+    const own = info.own ?? [];
+    if (!own.includes(square) && own.length >= info.quota) {
+      setHint(
+        `You have placed all ${String(info.quota)} mines. Click one of yours to take it back.`,
+      );
+      return;
+    }
+    setHint(null);
+    game.togglePlacement(square);
+  };
 
   const onSquareClick = (square: Square) => {
     showHint(square);
@@ -372,6 +394,7 @@ export function GameScreen({
           <div className="window-body handoff-body" />
           <HandoffScreen
             to={game.handoffTo}
+            placing={game.handoffPlacing}
             onReady={() => {
               setSelected(null);
               setOrientation(flip ? (game.handoffTo ?? "w") : "w");
@@ -408,22 +431,42 @@ export function GameScreen({
           onOnline={onOpenLobby}
           onLeave={requestLeave}
         />
-        <InfoBar
-          view={view}
-          face={face}
-          flagMode={flagMode}
-          crackColor={crackColor}
-          gameOver={over}
-          pendingDraw={game.pendingDraw}
-          canAnswerDraw={game.canAnswerDraw}
-          onSmiley={newGame}
-          onRules={openRules}
-          onFlagToggle={() => {
-            setFlagMode((v) => !v);
-          }}
-          onAcceptDraw={ask("acceptDraw", game.acceptDraw)}
-          onDeclineDraw={ask("declineDraw", game.declineDraw)}
-        />
+        {placing && game.placement !== null ? (
+          <PlacementScreen
+            view={view}
+            msLeft={game.placement.msLeft}
+            color={game.placement.color}
+            onToggle={onPlacementToggle}
+            onDone={game.donePlacement}
+            autoPlaced={null}
+            drawOffer={
+              <DrawOfferBar
+                pendingDraw={game.pendingDraw}
+                gameOver={over}
+                canAnswerDraw={game.canAnswerDraw}
+                onAcceptDraw={ask("acceptDraw", game.acceptDraw)}
+                onDeclineDraw={ask("declineDraw", game.declineDraw)}
+              />
+            }
+          />
+        ) : (
+          <InfoBar
+            view={view}
+            face={face}
+            flagMode={flagMode}
+            crackColor={crackColor}
+            gameOver={over}
+            pendingDraw={game.pendingDraw}
+            canAnswerDraw={game.canAnswerDraw}
+            onSmiley={newGame}
+            onRules={openRules}
+            onFlagToggle={() => {
+              setFlagMode((v) => !v);
+            }}
+            onAcceptDraw={ask("acceptDraw", game.acceptDraw)}
+            onDeclineDraw={ask("declineDraw", game.declineDraw)}
+          />
+        )}
         {online !== null && (
           <ConnectionBanner
             connection={online.connection}
@@ -438,25 +481,28 @@ export function GameScreen({
             onLeave={onLeaveOnline}
           />
         )}
-        <div className="window-body">
-          <Board
-            view={view}
-            flags={gated ? NO_FLAGS : game.flags}
-            orientation={orientation}
-            selected={gated ? null : selected}
-            destinations={gated ? [] : destinations}
-            mines={gameOver?.mines ?? []}
-            fx={activeFx}
-            fxKey={turnId * 2 + (phase === "post" ? 1 : 0)}
-            onSquareClick={onSquareClick}
-            onSquareFocus={showHint}
-            onSquareFlag={(sq) => {
-              if (!over && !gated) flagSquare(sq);
-            }}
-          />
-          <MoveLog view={view} logRef={logRef} />
-        </div>
-        <StatusBar view={view} hint={hint} you={game.seat} />
+        {!placing && (
+          <div className="window-body">
+            <Board
+              view={view}
+              flags={gated ? NO_FLAGS : game.flags}
+              orientation={orientation}
+              selected={gated ? null : selected}
+              destinations={gated ? [] : destinations}
+              mines={gameOver?.mines ?? []}
+              owned={gameOver?.owned ?? null}
+              fx={activeFx}
+              fxKey={turnId * 2 + (phase === "post" ? 1 : 0)}
+              onSquareClick={onSquareClick}
+              onSquareFocus={showHint}
+              onSquareFlag={(sq) => {
+                if (!over && !gated) flagSquare(sq);
+              }}
+            />
+            <MoveLog view={view} logRef={logRef} />
+          </div>
+        )}
+        <StatusBar view={view} hint={hint ?? autoPlacedText} you={game.seat} placing={placing} />
         {promotion !== null && (
           <PromotionPicker
             color={view.turn}

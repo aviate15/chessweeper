@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { playCue } from "../audio";
-import { DEFAULT_OPTIONS, type GameOptions } from "../settings";
+import { DEFAULT_OPTIONS, clampOptions, type GameOptions } from "../settings";
 import { Dialog } from "./Dialog";
 import { SettingsFields } from "./SettingsFields";
 
@@ -17,7 +17,7 @@ export function NewGameDialog({
   const [draft, setDraft] = useState(settings);
   return (
     <Dialog title="New game" label="New game" onClose={onClose}>
-      <SettingsFields settings={draft} onChange={setDraft} />
+      <SettingsFields settings={draft} onChange={setDraft} modePicker />
       <div className="dialog-buttons">
         <button
           type="button"
@@ -34,7 +34,8 @@ export function NewGameDialog({
           className="btn"
           onClick={() => {
             playCue("click");
-            onStart(draft);
+            // Auto games keep `mode` omitted (clampOptions drops an explicit "auto").
+            onStart(clampOptions(draft));
           }}
         >
           OK

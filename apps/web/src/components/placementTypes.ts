@@ -1,26 +1,21 @@
-import type { Color, PublicView, Square } from "@chessweeper/engine";
+import {
+  DEFAULT_MANUAL_RESHUFFLE_INTERVAL,
+  DEFAULT_RESHUFFLE_INTERVAL,
+  type EventView,
+  type GameMode,
+  type GameOverView,
+  type Phase,
+  type PublicView,
+  type Square,
+} from "@chessweeper/engine";
 
-/**
- * Structural mirror of the Manual mine contract (3.10). These are defined locally because the
- * engine types land in parallel. When the engine exports them, replace this file's contents with
- * re-exports and keep the names.
- */
-export type GameMode = "auto" | "manual";
+export type { GameMode, Phase };
 
 /** Default reshuffle interval per mode (6 auto, 10 manual). */
 export const DEFAULT_INTERVAL_BY_MODE: Readonly<Record<GameMode, number>> = {
-  auto: 6,
-  manual: 10,
+  auto: DEFAULT_RESHUFFLE_INTERVAL,
+  manual: DEFAULT_MANUAL_RESHUFFLE_INTERVAL,
 };
-
-export type Phase =
-  | { readonly kind: "play" }
-  | {
-      readonly kind: "placement";
-      readonly round: number;
-      readonly quota: number;
-      readonly ready: { readonly w: boolean; readonly b: boolean };
-    };
 
 export interface PlacementInfo {
   readonly quota: number;
@@ -29,7 +24,11 @@ export interface PlacementInfo {
   readonly own: readonly Square[] | null;
 }
 
-/** PublicView plus the manual-mode additions. */
+/**
+ * PublicView plus the manual-mode additions (3.10).
+ * M-B-RECONCILE: once the engine's PublicView carries `phase` and `placement`, this is an
+ * alias of PublicView; local play builds these fields in useLocalGame, online in online/wire.ts.
+ */
 export type PlacementView = PublicView & {
   readonly phase: Phase;
   readonly placement: PlacementInfo | null;
@@ -41,13 +40,17 @@ export interface OwnedLayout {
   readonly b: readonly Square[];
 }
 
+/**
+ * The game-over view with the final layout by placer (3.10), null in Auto mode.
+ * M-B-RECONCILE: `owned` becomes a required field of the engine's GameOverView.
+ */
+export type GameOverWithOwned = Omit<GameOverView, "view"> & {
+  readonly view: PlacementView;
+  readonly owned?: OwnedLayout | null | undefined;
+};
+
 /** Public event: a big mine went off and hit the 3x3 area around it. */
-export interface BigMineBlastedEvent {
-  readonly type: "BigMineBlasted";
-  readonly square: Square;
-  readonly by: { readonly color: Color; readonly type: string };
-  readonly area: readonly Square[];
-}
+export type BigMineBlastedEvent = Extract<EventView, { type: "BigMineBlasted" }>;
 
 /** Mines each player places at the start of a game (3.10): half the starting count, half-up. */
 export function placementQuota(densityPercent: number): number {

@@ -16,21 +16,29 @@ const range = (lo: number, hi: number, step: number) =>
 
 /** One-line summary of a game's settings, shown to both players (3.7). */
 export function settingsSummary(settings: GameSettings): string {
-  return `Reshuffle every ${String(settings.reshuffleInterval)} turns, mine density ${String(settings.densityPercent)}%`;
+  const text = `Reshuffle every ${String(settings.reshuffleInterval)} turns, mine density ${String(settings.densityPercent)}%`;
+  return settings.mode === "manual" ? `Manual mine mode. ${text}` : text;
 }
 
 /** The two per-game choices: reshuffle interval and mine density (3.7). */
 export function SettingsFields({
   settings,
   onChange,
+  modePicker,
 }: {
-  /** `mode` is optional: without it the mode picker is not shown and the game is Auto mine. */
+  /** `mode` is optional: a missing mode means Auto mine. */
   settings: GameSettings & { mode?: GameMode };
   onChange: (settings: GameSettings & { mode?: GameMode }) => void;
+  /**
+   * Show the Mine mode picker. Without it the picker shows only when `settings` carries a mode.
+   * Dialogs pass true so Auto settings (which omit `mode`) still offer the choice; the value
+   * then carries an explicit mode, and `clampOptions` drops it again for Auto.
+   */
+  modePicker?: boolean;
 }) {
   const id = useId();
   const startMines = mineCountFor(32, configFromOptions(settings));
-  const mode = settings.mode;
+  const mode = settings.mode ?? (modePicker === true ? "auto" : undefined);
   // clampOptions may not know about `mode` yet, so carry it through explicitly.
   const clamp = (next: GameSettings & { mode?: GameMode }) => {
     const clamped: GameSettings & { mode?: GameMode } = clampOptions(next);

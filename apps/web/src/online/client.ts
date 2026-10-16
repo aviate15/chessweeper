@@ -47,7 +47,7 @@ export type ConnectionState = "connecting" | "open" | "reconnecting" | "closed";
 export type ClientEvent =
   | { readonly type: "connection"; readonly state: ConnectionState }
   | (ServerMessage & { readonly type: "joined" | "snapshot" | "update" | "game_over" })
-  | (ServerMessage & { readonly type: "opponent" | "draw" })
+  | (ServerMessage & { readonly type: "opponent" | "draw" | "placement" })
   /** A server error, or `protocol` when a frame failed validation. */
   | { readonly type: "error"; readonly code: ErrorCode | "protocol" }
   | { readonly type: "fatal"; readonly reason: FatalReason };
@@ -139,6 +139,20 @@ export class OnlineClient {
     if (this.seq === null) return false;
     const base = { type: "move", seq: this.seq, from, to } as const;
     return this.send(promo === undefined ? base : { ...base, promo });
+  }
+
+  /** Manual mine mode (3.10): put one of my mines on a square (private until the round ends). */
+  place(sq: Square): boolean {
+    return this.send({ type: "place", sq });
+  }
+
+  unplace(sq: Square): boolean {
+    return this.send({ type: "unplace", sq });
+  }
+
+  /** Done placing; the server random-fills anything below my quota. */
+  placementDone(): boolean {
+    return this.send({ type: "placement_done" });
   }
 
   resign(): boolean {
@@ -311,6 +325,7 @@ export class OnlineClient {
         return;
       case "opponent":
       case "draw":
+      case "placement":
         this.emit(message);
         return;
       case "error":

@@ -1,5 +1,4 @@
 import type { Color, EventView, PieceView, Square } from "@chessweeper/engine";
-import type { BigMineBlastedEvent } from "./components/placementTypes";
 
 /** Timings in ms. Pure data: the CSS keyframes in theme.css use the same numbers. */
 export const SLIDE_MS = 140;
@@ -67,7 +66,7 @@ function rookSlide(from: Square, castle: "king" | "queen"): { from: Square; to: 
  * Pure; under reduced motion there are no effects and nothing blocks.
  */
 export function presentationFor(
-  events: readonly (EventView | BigMineBlastedEvent)[],
+  events: readonly EventView[],
   options: PresentationOptions,
 ): Presentation {
   if (options.reducedMotion) return NO_PRESENTATION;

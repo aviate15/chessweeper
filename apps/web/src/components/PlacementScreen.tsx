@@ -1,4 +1,5 @@
 import type { Color, Flags, Square as Sq } from "@chessweeper/engine";
+import type { ReactNode } from "react";
 import { playCue } from "../audio";
 import { COLOR_NAME } from "../narration";
 import { Board } from "./Board";
@@ -21,6 +22,8 @@ export interface PlacementScreenProps {
   autoPlaced: number | null;
   /** Whose mines are being placed. Defaults to the view's seat, then White. */
   color?: Color;
+  /** Resigning and draw offers are allowed during placement (3.10): the pending offer bar. */
+  drawOffer?: ReactNode;
 }
 
 /** Manual mine mode (3.10): the placement phase. The player marks their own mines, then is Done. */
@@ -31,6 +34,7 @@ export function PlacementScreen({
   onDone,
   autoPlaced,
   color,
+  drawOffer,
 }: PlacementScreenProps) {
   const me: Color = color ?? view.viewer ?? "w";
   const opponent: Color = me === "w" ? "b" : "w";
@@ -59,6 +63,7 @@ export function PlacementScreen({
               <span className="led-caption">Seconds</span>
             </div>
           )}
+          {drawOffer}
         </div>
       </div>
       <div className="window-body">
