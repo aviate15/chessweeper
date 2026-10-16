@@ -110,6 +110,8 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 - `[D]` Players can **resign** or **offer a draw** (the opponent accepts or declines).
 - `[D]` **No clocks** in v1.
 - `[D]` Online disconnect: the disconnected player has a **60-second grace period** to reconnect. After that the opponent may claim the win.
+- `[D]` **Non-move endings**: resigning ends the game at once; the resigning side loses (reason `resignation`). An accepted draw offer ends it as a draw (reason `agreement`). A win claimed after the 60-second grace ends it with the absent side losing (reason `abandonment`). Each produces a public `GameOver` event and a public log entry (colour = the side that resigned, accepted the draw, or was absent). The no-capture counter does not change, no reshuffle fires, and a pending check-exception chain is cleared.
+- `[D]` **Draw offers**: either side may offer at any time. At most one offer is pending. It lapses when any move is made or when the opponent declines. The offerer cannot offer again until they have made a move. Offers are session state (server or local client), not game state.
 
 ### 3.7 Reshuffle (full reset, anti-stall)
 
@@ -178,6 +180,7 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 10-turn full re
 
 ## 8. Change log
 
+- 2026-10-16: Resign, draw agreement and abandonment are decided as non-move endings with their own reasons and a public log entry; draw offers lapse on the next move (3.6).
 - 2026-10-16: Client projection (M8). Added to the public information (3.2): lost pieces with cause, the public move log, in-check and the viewer's seat. The final mine layout is revealed to both players when the game ends, and only then (3.6). The projected view carries no half-move clock (there is no 50-move rule).
 - 2026-10-16: Safe-start relocation never targets a revealed square or a crater square (3.1).
 - 2026-10-16: Safe-start relocation keeps every revealed number identical (new square touches the same revealed squares as the old one); widens to any rank, then drops the mine, if no square exists. The no-capture counter counts completed turns (a chain counts once), resets on any turn that captures a piece (including an en passant whose capturer explodes), and is frozen while a chain is pending or the game ends. `reshuffleInterval = 10` is a tunable config value. `MineRelocated` is a server-only event.
