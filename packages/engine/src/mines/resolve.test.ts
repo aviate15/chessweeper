@@ -183,14 +183,6 @@ describe("guard rails for later milestones", () => {
     expect(() => resolveMove(scenario({ fen: kingsOnly }), e2e4)).toThrow(IllegalMoveError);
   });
 
-  it.each([
-    ["castling", "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", "e1g1"],
-    ["en passant", "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2", "e5d6"],
-    ["promotion", "4k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7a8q"],
-  ])("refuses %s until special moves on mines land in M6", (_name, fen, uci) => {
-    expect(() => play(scenario({ fen }), uci)).toThrow(NotYetSupportedError);
-  });
-
   it("refuses an explosion that exposes the mover's king (check exception is M6)", () => {
     // Bishop a1 blocks the rook's check by going to e5, which is mined.
     const fen = "4r2k/8/8/8/8/8/8/B3K3 w - - 0 1";

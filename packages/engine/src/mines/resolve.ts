@@ -1,8 +1,8 @@
 import { applyMove } from "../chess/apply";
 import { isInCheck } from "../chess/attacks";
-import type { Move } from "../chess/move";
+import { castleRookSquares, type Move } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
-import type { Position } from "../chess/types";
+import type { Piece, Position } from "../chess/types";
 import type { GameEvent } from "./events";
 import { resolveLanding, type Working } from "./landing";
 import type { GameState } from "./state";
@@ -46,19 +46,14 @@ export function resolveMove(state: GameState, move: Move): Resolution {
   );
   if (legal === undefined) throw new IllegalMoveError();
 
-  // Rules for these arrive in later milestones.
-  if (legal.castle !== null || legal.enPassant || legal.promotion !== null) {
-    throw new NotYetSupportedError("castling, en passant and promotion (M6)");
-  }
   if (state.public.lives.w === 0 || state.public.lives.b === 0) {
     throw new NotYetSupportedError("moves after a king has lost its last life");
   }
 
-  const to = legal.to;
+  const origin = state.position.board[legal.from];
+  if (origin == null) throw new Error("No piece on the move origin");
+  const mover = origin.color;
   const moved = applyMove(state.position, legal);
-  const landed = moved.board[to];
-  if (landed == null) throw new Error("Moving piece missing after applyMove");
-  const mover = landed.color;
 
   const work: Working = {
     board: moved.board.slice(),
@@ -72,14 +67,34 @@ export function resolveMove(state: GameState, move: Move): Resolution {
     work.events.push({ type: "PieceCaptured", square: legal.captureSquare, piece: legal.captured });
   }
 
-  let position: Position = moved;
-  const outcome = resolveLanding(work, to, landed, legal.captured !== null);
-  if (outcome === "destroyed") {
-    // 3.4: the move is wasted. A destroyed double-pushed pawn sets no en passant target.
-    position = { ...moved, board: work.board, enPassant: null };
-    if (isInCheck(position, mover)) {
-      throw new NotYetSupportedError("check exception after an explosion");
+  // Landings resolve in order: the moving piece, then (castling only) the rook. A king
+  // that loses its last life ends the game, so nothing after that landing resolves.
+  // The landing piece is the original one, so a pawn on a mined promotion square dies as a
+  // pawn and does not promote (3.5).
+  const landings: { square: number; piece: Piece; isCapture: boolean }[] = [
+    { square: legal.to, piece: origin, isCapture: legal.captureSquare === legal.to },
+  ];
+  const rook = castleRookSquares(legal);
+  if (rook !== null) {
+    landings.push({ square: rook.to, piece: { color: mover, type: "r" }, isCapture: false });
+  }
+  let destroyed = false;
+  for (const landing of landings) {
+    if (resolveLanding(work, landing.square, landing.piece, landing.isCapture) === "destroyed") {
+      destroyed = true;
     }
+    if (work.lives[mover] === 0) break;
+  }
+
+  // 3.4: a destroyed piece wastes the move; a destroyed double-pushed pawn sets no en
+  // passant target.
+  const position: Position = {
+    ...moved,
+    board: work.board,
+    enPassant: destroyed ? null : moved.enPassant,
+  };
+  if (destroyed && isInCheck(position, mover)) {
+    throw new NotYetSupportedError("check exception after an explosion");
   }
 
   work.events.push({ type: "TurnPassed", to: position.turn });
