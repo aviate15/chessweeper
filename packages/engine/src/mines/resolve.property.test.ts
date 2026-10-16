@@ -43,8 +43,12 @@ const snapshot = (s: GameState) =>
   ]);
 
 function checkInvariants(state: GameState, initialMines: number): void {
-  // 3.1, 3.5: no mine is ever under a piece.
-  for (const mine of state.hidden.mines) expect(state.position.board[mine]).toBeNull();
+  // 3.1, 3.5: no mine is ever under a piece in a live game. The one exception is a castle
+  // whose king dies on its landing: the game is over, so the rook landing never resolves
+  // (3.6) and the rook may stand on a still-live mine.
+  if (state.public.status.kind === "ongoing") {
+    for (const mine of state.hidden.mines) expect(state.position.board[mine]).toBeNull();
+  }
   // A square is a live mine, a crater, or neither; revealed squares never hold a mine.
   for (const crater of state.public.craters) expect(state.hidden.mines.has(crater)).toBe(false);
   for (const square of state.public.revealed) expect(state.hidden.mines.has(square)).toBe(false);
@@ -140,6 +144,9 @@ const emptyTally = (): Tally => ({
   checkmates: 0,
 });
 
+// Seeds are pinned so CI is reproducible (and the non-vacuity checks below are stable).
+// To explore, change the seed or raise numRuns temporarily; a failing run prints a
+// counterexample to replay.
 const choicesArb = fc.array(fc.nat({ max: 1000 }), { minLength: 1, maxLength: 80 });
 const seedArb = fc.integer({ min: 0, max: 0xffffffff });
 
@@ -151,7 +158,7 @@ describe("mine invariants over random games", () => {
         const config = { ...DEFAULT_CONFIG, mineDensity: 0.7 };
         playRandomly(createGame({ rng: createSeededRng(seed), config }), choices, tally);
       }),
-      { numRuns: 200 },
+      { numRuns: 200, seed: 20261016 },
     );
     expect(tally.explosions).toBeGreaterThan(0);
   });
@@ -186,7 +193,7 @@ describe("mine invariants over random games", () => {
           playRandomly(game, choices, tally);
         },
       ),
-      { numRuns: 400 },
+      { numRuns: 400, seed: 20261016 },
     );
     // Make sure the generator really reaches the interesting cases.
     expect(tally.explosions).toBeGreaterThan(0);
