@@ -186,13 +186,15 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 8-turn full res
 - Hooks: format/lint after edits; typecheck before commits. Subagent: read-only rules auditor that checks the engine against this file. Permission allowlist for routine `npm`/`git`/`gh`.
 - CLAUDE.md rule: mechanics live in `docs/GAME_DESIGN.md`; never invent rules; ask first.
 - `[D]` Architecture: server-authoritative hidden state; one pure TypeScript rules engine shared by server and browser; pnpm-workspaces monorepo with TypeScript everywhere (`packages/engine`, `apps/web`, `apps/server`).
-- `[D]` Hosting (delegated to Claude by Aviate): small Node + `ws` WebSocket server on Fly.io; static web client on Cloudflare Pages or Vercel, final pick at deploy time.
+- `[D]` Hosting (delegated to Claude by Aviate): small Node + `ws` WebSocket server on Fly.io (app `chessweeper-server`, region `sin`, a single instance because rooms are in memory); static web client on Vercel (picked 2026-10-16). See `docs/DEPLOY.md`. Operational detail, not a rule: a room is freed 2 minutes after its game ends.
 - `[D]` UI framework: Vite + React, rendered with DOM/CSS and hand-rolled bevels. Add a canvas overlay only if an animation needs it.
 - Custom rules engine likely needed: destruction, lives and reshuffles conflict with off-the-shelf chess legality libraries.
 
 ---
 
 ## 8. Change log
+
+- 2026-10-16: Deploy milestone (M13). Hosting settled: Fly.io (`sin`) for the server, Vercel for the web client. A finished room is freed 2 minutes after game over; per-IP caps are generous and set by env. No rule changes.
 
 - 2026-10-16: Online client flow recorded in section 6 (lobby, waiting room, fixed orientation, reconnect, confirm dialogs, Leave game, invite link). No rule changes.
 - 2026-10-16: Reshuffle interval raised from 6 to 8 total turns (4 per player) after the second playtest; one named config default (`DEFAULT_RESHUFFLE_INTERVAL`) so per-mode values can be added later (3.7). Local-play Game → Options added for interval and density (section 6).
