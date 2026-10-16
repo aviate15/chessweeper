@@ -97,7 +97,7 @@ describe("rooms and seats", () => {
     a.send({
       type: "create_room",
       settings: { reshuffleInterval: 4.5, densityPercent: 30 },
-    } as never);
+    });
     expect((await a.next("error")).code).toBe("bad-message");
   });
 
