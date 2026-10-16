@@ -5,7 +5,7 @@ import { legalMoves } from "../chess/movegen";
 import { fileOf, rankOf } from "../chess/square";
 import { revealedNumbers } from "./numbers";
 import { createSeededRng } from "./rng";
-import { NotYetSupportedError, resolveMove } from "./resolve";
+import { resolveMove } from "./resolve";
 import { createGame } from "./setup";
 import type { GameState } from "./state";
 
@@ -61,22 +61,18 @@ describe("mine invariants over random games", () => {
           checkInvariants(state, initialMines);
 
           for (const choice of choices) {
+            if (state.public.status.kind === "over") break;
             const moves = legalMoves(state.position).filter(
               (m) => m.castle === null && !m.enPassant && m.promotion === null,
             );
             const move = moves[choice % Math.max(moves.length, 1)];
             if (move === undefined) break;
             const before = snapshot(state);
-            try {
-              const resolution = resolveMove(state, move);
-              state = resolution.state;
-              for (const event of resolution.events) {
-                if (event.type === "PieceDestroyed") seen.explosions += 1;
-                if (event.type === "NumberRevealed") seen.reveals += 1;
-              }
-            } catch (error) {
-              if (error instanceof NotYetSupportedError) break; // a later-milestone situation
-              throw error;
+            const resolution = resolveMove(state, move);
+            state = resolution.state;
+            for (const event of resolution.events) {
+              if (event.type === "PieceDestroyed") seen.explosions += 1;
+              if (event.type === "NumberRevealed") seen.reveals += 1;
             }
             expect(snapshot(state)).not.toBe(before);
             checkInvariants(state, initialMines);
@@ -98,11 +94,7 @@ describe("mine invariants over random games", () => {
         const before = snapshot(state);
         for (const move of legalMoves(state.position)) {
           if (move.castle !== null || move.enPassant || move.promotion !== null) continue;
-          try {
-            resolveMove(state, move);
-          } catch (error) {
-            if (!(error instanceof NotYetSupportedError)) throw error;
-          }
+          resolveMove(state, move);
           expect(snapshot(state)).toBe(before);
         }
       }),

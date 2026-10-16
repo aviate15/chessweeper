@@ -15,14 +15,11 @@ export class IllegalMoveError extends Error {
   }
 }
 
-/**
- * A situation whose rules belong to a later milestone. The engine refuses it loudly
- * instead of guessing (CLAUDE.md: never invent a rule).
- */
-export class NotYetSupportedError extends Error {
-  constructor(what: string) {
-    super(`Not supported yet: ${what}`);
-    this.name = "NotYetSupportedError";
+/** The game has already ended (design doc 3.6), so no further moves are accepted. */
+export class GameOverError extends Error {
+  constructor() {
+    super("The game is over");
+    this.name = "GameOverError";
   }
 }
 
@@ -41,14 +38,11 @@ export interface Resolution {
  * Immutable: returns a new state and the events, leaving the input untouched.
  */
 export function resolveMove(state: GameState, move: Move): Resolution {
+  if (state.public.status.kind === "over") throw new GameOverError();
   const legal = legalMoves(state.position).find(
     (m) => m.from === move.from && m.to === move.to && m.promotion === move.promotion,
   );
   if (legal === undefined) throw new IllegalMoveError();
-
-  if (state.public.lives.w === 0 || state.public.lives.b === 0) {
-    throw new NotYetSupportedError("moves after a king has lost its last life");
-  }
 
   const origin = state.position.board[legal.from];
   if (origin == null) throw new Error("No piece on the move origin");

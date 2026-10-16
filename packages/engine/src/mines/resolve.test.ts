@@ -3,7 +3,7 @@ import { moveToUci } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
 import { parseSquare } from "../chess/square";
 import { gameFromScenario, type Scenario } from "./scenario";
-import { IllegalMoveError, NotYetSupportedError, resolveMove } from "./resolve";
+import { IllegalMoveError, resolveMove } from "./resolve";
 import type { GameState } from "./state";
 
 function sq(name: string): number {
@@ -173,7 +173,7 @@ describe("king edge cases", () => {
   });
 });
 
-describe("guard rails for later milestones", () => {
+describe("illegal moves", () => {
   const kingsOnly = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
 
   it("rejects moves that are not legal chess moves", () => {
@@ -181,10 +181,5 @@ describe("guard rails for later milestones", () => {
     const e2e4 = legalMoves(start.position).find((m) => moveToUci(m) === "e2e4");
     if (e2e4 === undefined) throw new Error("setup");
     expect(() => resolveMove(scenario({ fen: kingsOnly }), e2e4)).toThrow(IllegalMoveError);
-  });
-
-  it("refuses to continue once a king has no lives (game end is M6)", () => {
-    const game = scenario({ fen: kingsOnly, lives: { w: 0, b: 3 } });
-    expect(() => play(game, "e1e2")).toThrow(NotYetSupportedError);
   });
 });
