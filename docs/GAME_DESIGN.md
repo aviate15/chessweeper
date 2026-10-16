@@ -165,7 +165,15 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 8-turn full res
 - `[D]` Animations: on a mine hit the explosion graphic and sound play first, then the handoff screen (about 800 ms at most, skippable by click or key; game state updates instantly; online play never blocks input). Also: piece slide, capture pop, number flip-reveal, reshuffle wave, king-life crack, check flash, game-over mine reveal. All respect reduced-motion.
 - `[D]` Game → Options (local play): reshuffle interval and mine density, applied at New game, so tuning needs no code change. Defaults come from the config (8 turns, 0.25).
 - `[D]` Rules page: shown on first load ("Don't show again" saved locally), reachable from a Help menu or "?" button; written from this document only. Numbers show a tooltip (what they count, which piece's landing revealed them) and a corner-badge legend.
-- `[Q]` Lobby and online flow (later milestone).
+- `[D]` Online flow (2026-10-16). The app opens on local pass-and-play. **Game → Online...** opens a Win 3.1-style Lobby dialog with "Create game" and "Join game" (6-character invite code, input uppercased and stripped of spaces).
+  - Creating shows a waiting room: the code, "Copy code" and "Copy link" (`?join=CODE` opens the Lobby with the code filled in), "Waiting for opponent..." and Cancel. Cancel is client-only (the socket closes and the seat token is forgotten; the server drops the empty room later).
+  - Online play reuses the board, animations, sounds, status bar, move log and rules page. The board is fixed to the player's own colour at the bottom: no flipping and no handoff screen. Flip board and Options are disabled online (the server uses the default config).
+  - The client renders only from the server's public view and projected events. The final mine layout arrives with game over and is shown then.
+  - Flags stay private in the browser (localStorage, per game and seat) and are cleared on a reshuffle, including one missed while disconnected.
+  - Reconnect: the seat token is stored per game. On reload or a dropped socket the client rejoins with the token and applies the snapshot, showing a "Reconnecting..." banner meanwhile. An "Opponent disconnected" notice shows while the other side is away; after the 60-second grace (3.6) it offers "Claim win".
+  - Resign, offer draw, accept, decline and claim win each ask for confirmation online.
+  - Server errors show as a short friendly message, never a crash.
+  - The smiley and Game → New game become **Leave game**: during play they ask the player to resign first; after game over they go straight to the lobby. The game-over dialog offers "Back to lobby".
 
 ---
 
@@ -186,6 +194,7 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 8-turn full res
 
 ## 8. Change log
 
+- 2026-10-16: Online client flow recorded in section 6 (lobby, waiting room, fixed orientation, reconnect, confirm dialogs, Leave game, invite link). No rule changes.
 - 2026-10-16: Reshuffle interval raised from 6 to 8 total turns (4 per player) after the second playtest; one named config default (`DEFAULT_RESHUFFLE_INTERVAL`) so per-mode values can be added later (3.7). Local-play Game → Options added for interval and density (section 6).
 
 - 2026-10-16: UI v2 decisions recorded in section 6 (retro skin, layout, board flip, sound, animations) after the style tile was approved.
