@@ -30,4 +30,16 @@ Game rules: @docs/GAME_DESIGN.md
 
 ## Commands
 
-Fill this in once the scaffold exists: install, dev, test, lint, typecheck, build.
+Node 24 (`.nvmrc`; >=22 works), pnpm 12. Run from the repo root.
+
+- `pnpm install`: install all workspace dependencies.
+- `pnpm test`: run every Vitest project once (`pnpm test:watch` to watch).
+- `pnpm --filter @chessweeper/engine test`: test a single package.
+- `pnpm lint`: ESLint (strict type-checked; engine purity rules).
+- `pnpm typecheck`: `tsc --noEmit` for root configs and every package.
+- `pnpm format` / `pnpm format:check`: Prettier.
+- `pnpm check`: format:check, lint, typecheck and test. Must pass before saying work is done.
+- `pnpm build`: build packages that define a build script (none yet).
+- Dev servers: none yet (added with `apps/server` and `apps/web`).
+
+Hooks in `.claude/settings.json` auto-format edited files and block `git commit` when typecheck fails.
