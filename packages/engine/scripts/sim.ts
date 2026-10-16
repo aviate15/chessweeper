@@ -4,9 +4,11 @@
  *
  *   pnpm --filter @chessweeper/engine sim [-- <games per variant>]
  *
- * Not a test and not run in CI. Spread-out placements are applied here only, by replacing
- * `hidden.mines` after setup and after every reshuffle; the engine itself still places
- * mines uniformly. Safe-start relocation is the engine's own and ignores the constraint.
+ * Not a test and not run in CI. "engine" variants use the engine's own placement (at most
+ * 2 mines per 3x3 area, design doc 3.1). Other placements are tried here only, by replacing
+ * `hidden.mines` after setup and after every reshuffle. Safe-start relocation is the
+ * engine's own and ignores the constraint. The first study (2026-10-17) compared uniform
+ * placement with these spread-out rules; uniform is no longer in the engine.
  */
 import { legalMoves } from "../src/chess/movegen";
 import { castleRookSquares, type Move } from "../src/chess/move";
@@ -26,7 +28,7 @@ import { mineCountFor } from "../src/mines/config";
 declare const console: { log(...args: unknown[]): void };
 declare const process: { argv: string[] };
 
-type Placement = "uniform" | "nonadjacent" | "max2per3x3";
+type Placement = "engine" | "nonadjacent" | "max2per3x3";
 type Policy = "random" | "capture-pref";
 
 interface Variant {
@@ -39,13 +41,10 @@ const INTERVAL = 6;
 const MAX_PLIES = 150;
 
 const VARIANTS: readonly Variant[] = [
-  { name: "25% uniform", density: 0.25, placement: "uniform" },
-  { name: "30% uniform", density: 0.3, placement: "uniform" },
-  { name: "35% uniform", density: 0.35, placement: "uniform" },
+  { name: "25% engine", density: 0.25, placement: "engine" },
+  { name: "30% engine", density: 0.3, placement: "engine" },
+  { name: "35% engine", density: 0.35, placement: "engine" },
   { name: "30% no-adjacent", density: 0.3, placement: "nonadjacent" },
-  { name: "35% no-adjacent", density: 0.35, placement: "nonadjacent" },
-  { name: "30% max2/3x3", density: 0.3, placement: "max2per3x3" },
-  { name: "35% max2/3x3", density: 0.35, placement: "max2per3x3" },
 ];
 
 function windowSquares(center: Square): Square[] {
@@ -71,7 +70,7 @@ function maxIn3x3(mines: ReadonlySet<Square>): number {
 }
 
 function allowed(mines: ReadonlySet<Square>, square: Square, placement: Placement): boolean {
-  if (placement === "uniform") return true;
+  if (placement === "engine") return true;
   if (placement === "nonadjacent") {
     return !windowSquares(square).some((s) => mines.has(s));
   }
@@ -207,7 +206,7 @@ function playGame(seed: number, variant: Variant, policy: Policy, stats: Stats):
   };
   let state = createGame({ rng, config });
   const expected = mineCountFor(32, config);
-  if (variant.placement !== "uniform") state = respread(state, rng, variant, true);
+  if (variant.placement !== "engine") state = respread(state, rng, variant, true);
 
   const size = state.hidden.mines.size;
   stats.games += 1;
@@ -254,7 +253,7 @@ function playGame(seed: number, variant: Variant, policy: Policy, stats: Stats):
     }
     stats.explosions[ph].add(exploded);
 
-    if (reshuffled && variant.placement !== "uniform") {
+    if (reshuffled && variant.placement !== "engine") {
       state = respread(state, rng, variant, false);
     }
     if (reshuffled) {

@@ -587,12 +587,24 @@ button {
   margin-top: 2px;
   padding: 2px 4px;
   min-height: 14px;
+  display: flex;
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
   box-shadow:
     inset 1px 1px 0 var(--px-gray),
     inset -1px -1px 0 var(--px-white);
+}
+
+.status-fixed {
+  flex: none;
+}
+
+/* Only the narration gives way on a long line; turn, settings and seat stay visible. */
+.status-narration {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-sep {

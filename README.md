@@ -1,6 +1,6 @@
 # Chessweeper
 
-Chess meets Minesweeper. Mines hide on the board, landing on a square reveals how many mines surround it, and pieces that step on a mine blow up. Kings have three lives. Numbers are public, flags are private, and every 8 turns without a capture the mines reshuffle. Online and local pass-and-play, in an old-school Windows Minesweeper look.
+Chess meets Minesweeper. Mines hide on the board, landing on a square reveals how many mines surround it, and pieces that step on a mine blow up. Kings have three lives. Numbers are public, flags are private, and every few turns (6 by default) without a capture the mines reshuffle. Online and local pass-and-play, in an old-school Windows Minesweeper look.
 
 Status: playable. Local pass-and-play and online two-player games (lobby, invite links, reconnect) work; play with friends from your laptop via [`docs/PLAY_ONLINE.md`](docs/PLAY_ONLINE.md); Fly.io and Vercel config is kept in [`docs/DEPLOY.md`](docs/DEPLOY.md). Rules live in [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md).
 
@@ -18,7 +18,7 @@ pnpm --filter @chessweeper/web dev   # play local pass-and-play in the browser
 
 - A rules page opens on first load. Reopen it any time from **Help → Rules** or the **?** button.
 - A revealed number counts the mines in the 8 neighbouring squares. Hover or focus a number to see what it counts and which landing revealed it. When a piece stands on a numbered square the number shows in a small corner badge.
-- **Game → Options** sets the reshuffle interval (default 8 turns) and mine density (default 25%). Changes apply at the next New game.
+- **Game → New game...** sets the reshuffle interval (default 6 turns) and mine density (default 30%) for the new game. Online, the creator picks them in the Create game dialog and both players see them.
 - Right-click (or the flag button) places private flags. Sound and board flipping are toggles in the Game menu.
 
 ## Play online with friends

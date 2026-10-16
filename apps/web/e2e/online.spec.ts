@@ -32,7 +32,12 @@ test("two players: create, join, play, reload, draw, resign, mines revealed", as
   await white.goto("/");
   await dismissRules(white);
   await gameMenu(white, "Online...");
+  // 3.7: the creator picks the settings; both players must see them.
+  await white.getByLabel("Reshuffle every").selectOption("4");
+  await white.getByLabel("Mine density").selectOption("40");
   await white.getByRole("button", { name: "Create game" }).click();
+  await expect(white.getByTestId("waiting-settings")).toContainText("every 4 turns");
+  await expect(white.getByTestId("waiting-settings")).toContainText("40%");
   const code = (await white.getByTestId("invite-code").textContent())?.trim() ?? "";
   expect(code).toMatch(/^[A-Z2-9]{6}$/);
   await expect(white.getByText("Waiting for opponent...")).toBeVisible();
@@ -53,6 +58,10 @@ test("two players: create, join, play, reload, draw, resign, mines revealed", as
   await expect(white.locator("[data-square]").first()).toHaveAttribute("data-square", "a8");
   await expect(black.locator("[data-square]").first()).toHaveAttribute("data-square", "h1");
   await expect(black.getByTestId("status-you")).toContainText("Black");
+  for (const page of [white, black]) {
+    await expect(page.getByTestId("status-settings")).toContainText("Reshuffle 4");
+    await expect(page.getByTestId("status-settings")).toContainText("Mines 40%");
+  }
 
   // A few moves. Each side's first move is mine-safe (3.1); later landings may hit a mine,
   // so only the move log is checked, which grows either way.
