@@ -15,7 +15,8 @@ export interface GameState {
 }
 
 export type GameResult = "w" | "b" | "draw";
-export type GameOverReason = "king-lives" | "checkmate" | "stalemate";
+export type GameOverReason =
+  "king-lives" | "checkmate" | "stalemate" | "resignation" | "agreement" | "abandonment";
 
 export type GameStatus =
   | { readonly kind: "ongoing" }

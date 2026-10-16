@@ -1,4 +1,5 @@
 import type { Move } from "../chess/move";
+import { endGame, type Ending } from "../mines/endgame";
 import { GameOverError, IllegalMoveError, resolveMove, type Resolution } from "../mines/resolve";
 import type { Rng } from "../mines/rng";
 import type { GameState } from "../mines/state";
@@ -30,6 +31,15 @@ export type TryResolve =
 export function tryResolveMove(state: GameState, move: Move, rng: Rng): TryResolve {
   try {
     return { ok: true, resolution: resolveMove(state, move, rng) };
+  } catch (error) {
+    return { ok: false, error: toSafeError(error) };
+  }
+}
+
+/** `endGame` that never throws: failures come back as a SafeError (3.6: nothing happens after game over). */
+export function tryEndGame(state: GameState, ending: Ending): TryResolve {
+  try {
+    return { ok: true, resolution: endGame(state, ending) };
   } catch (error) {
     return { ok: false, error: toSafeError(error) };
   }
