@@ -43,6 +43,20 @@ function parseArgs(argv: readonly string[]): Args {
   };
 }
 
+/** fetch with up to 3 tries: free tunnels sometimes drop the first request. */
+async function fetchRetry(url: string, init?: RequestInit): Promise<Response> {
+  let last: unknown;
+  for (let i = 0; i < 3; i++) {
+    try {
+      return await fetch(url, { signal: AbortSignal.timeout(10_000), ...init });
+    } catch (e) {
+      last = e;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  throw last instanceof Error ? last : new Error("fetch failed");
+}
+
 let failures = 0;
 function report(name: string, ok: boolean, detail = ""): void {
   if (!ok) failures += 1;
@@ -128,14 +142,14 @@ async function main(): Promise<void> {
   const origin = args.web ?? "https://smoke-test.invalid";
 
   await check("server /healthz is 200 ok", async () => {
-    const res = await fetch(`${args.server}/healthz`);
+    const res = await fetchRetry(`${args.server}/healthz`);
     must(res.status === 200, `status ${String(res.status)}`);
     must((await res.text()) === "ok", "body is not ok");
     return undefined;
   });
 
   await check("server 404s unknown files", async () => {
-    const res = await fetch(`${args.server}/nope.js`);
+    const res = await fetchRetry(`${args.server}/nope.js`);
     must(res.status === 404, `status ${String(res.status)}`);
     return undefined;
   });
@@ -143,7 +157,7 @@ async function main(): Promise<void> {
   if (args.web !== null) {
     const web = args.web;
     await check("web / serves the app, with security headers", async () => {
-      const res = await fetch(`${web}/`);
+      const res = await fetchRetry(`${web}/`);
       must(res.status === 200, `status ${String(res.status)}`);
       must(res.headers.get("content-type")?.includes("text/html") === true, "not html");
       if (args.skipHeaders) return "headers skipped";
@@ -158,17 +172,22 @@ async function main(): Promise<void> {
     });
 
     await check("web /?join=ABCDEF falls back to the app (SPA rewrite)", async () => {
-      const res = await fetch(`${web}/?join=ABCDEF`);
+      const res = await fetchRetry(`${web}/?join=ABCDEF`);
       must(res.status === 200, `status ${String(res.status)}`);
       must((await res.text()).includes('id="root"'), "not the app shell");
       return undefined;
     });
 
     await check("web bundle points at the game server", async () => {
-      const html = await (await fetch(`${web}/`)).text();
+      const html = await (await fetchRetry(`${web}/`)).text();
       const m = /src="\.?\/?(assets\/index-[^"]+\.js)"/.exec(html);
       must(m !== null, "main script not found");
-      const js = await (await fetch(`${web}/${m?.[1] ?? ""}`)).text();
+      const js = await (await fetchRetry(`${web}/${m?.[1] ?? ""}`)).text();
+      if (sameOrigin) {
+        // No server URL baked in: the client derives wss://<its own host>/ws at run time.
+        must(js.includes("/ws"), "bundle has no same-origin /ws path");
+        return "same-origin";
+      }
       must(
         js.includes(wsUrl),
         `bundle does not contain ${wsUrl} (VITE_SERVER_URL wrong at build time?)`,
