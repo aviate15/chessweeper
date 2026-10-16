@@ -2,6 +2,7 @@ import { parseFen, START_FEN } from "../chess/fen";
 import { rankOf } from "../chess/square";
 import type { Square } from "../chess/types";
 import { DEFAULT_CONFIG, mineCountFor, type GameConfig } from "./config";
+import { placementPhase } from "./placement";
 import type { Rng } from "./rng";
 import { placeSpread } from "./spread";
 import type { GameState } from "./state";
@@ -21,6 +22,33 @@ export interface CreateGameOptions {
  */
 export function createGame({ rng, config = DEFAULT_CONFIG }: CreateGameOptions): GameState {
   const position = parseFen(START_FEN);
+  if (config.mode === "manual") {
+    // 3.10: no mines yet. Both players place secretly (round 1), White first locally; no
+    // safe start because both sides place blind.
+    return {
+      position,
+      public: {
+        revealed: new Set(),
+        craters: new Set(),
+        lives: { w: config.kingLives, b: config.kingLives },
+        noCaptureCount: 0,
+        status: { kind: "ongoing" },
+        checkException: null,
+        log: [],
+        phase: placementPhase(position.board, config, 1),
+      },
+      hidden: {
+        mines: new Set(),
+        safeStart: { w: false, b: false },
+        chainCaptured: false,
+        owned: { w: new Set(), b: new Set() },
+        drafts: { w: new Set(), b: new Set() },
+        autoPlaced: null,
+        placementRound: 1,
+      },
+      config,
+    };
+  }
   const candidates: Square[] = [];
   position.board.forEach((piece, square) => {
     const rank = rankOf(square);
@@ -40,8 +68,17 @@ export function createGame({ rng, config = DEFAULT_CONFIG }: CreateGameOptions):
       status: { kind: "ongoing" },
       checkException: null,
       log: [],
+      phase: { kind: "play" },
     },
-    hidden: { mines: new Set(mines), safeStart: { w: true, b: true }, chainCaptured: false },
+    hidden: {
+      mines: new Set(mines),
+      safeStart: { w: true, b: true },
+      chainCaptured: false,
+      owned: null,
+      drafts: null,
+      autoPlaced: null,
+      placementRound: 0,
+    },
     config,
   };
 }

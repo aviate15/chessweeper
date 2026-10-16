@@ -67,6 +67,20 @@ function eventView(event: PublicEvent): EventView {
       return { type: "TurnPassed", to: event.to };
     case "Reshuffled":
       return { type: "Reshuffled", mineCount: event.mineCount };
+    // M-B: Manual mine mode (3.10) events, simple pass-through for now.
+    case "PlacementStarted":
+      return { type: "PlacementStarted", round: event.round, quota: event.quota };
+    case "PlayerReady":
+      return { type: "PlayerReady", color: event.color };
+    case "PlacementEnded":
+      return { type: "PlacementEnded", mineCount: event.mineCount };
+    case "BigMineBlasted":
+      return {
+        type: "BigMineBlasted",
+        square: event.square,
+        by: pieceView(event.by),
+        area: [...event.area],
+      };
     default: {
       const unreachable: never = event;
       return unreachable;

@@ -55,6 +55,8 @@ export interface PublicState {
    * Only public events are stored: server-only events are filtered out when written.
    */
   readonly log: readonly LogEntry[];
+  /** Always `{ kind: "play" }` in Auto mode; Manual mode starts in placement (3.10). */
+  readonly phase: Phase;
 }
 
 export interface HiddenState {
@@ -70,4 +72,26 @@ export interface HiddenState {
    * a piece, so the turn counts as a capture turn for the reshuffle counter (3.7).
    */
   readonly chainCaptured: boolean;
+  /**
+   * Manual mine mode (3.10): the live mines each player placed, so `mines` is their union.
+   * A square in both sets is a big mine. Null in Auto mode.
+   */
+  readonly owned?: { readonly w: ReadonlySet<Square>; readonly b: ReadonlySet<Square> } | null;
+  /** Manual mode: each player's private placements during a placement phase, else null. */
+  readonly drafts?: { readonly w: ReadonlySet<Square>; readonly b: ReadonlySet<Square> } | null;
+  /** Manual mode: mines each side had placed at random in the last round (3.10), else null. */
+  readonly autoPlaced?: { readonly w: number; readonly b: number } | null;
+  /** Manual mode: number of the latest placement round started (1 at the start); 0 in Auto. */
+  readonly placementRound?: number;
 }
+
+/** Manual mine mode (3.10): whether moves or mine placement are being accepted. */
+export type Phase =
+  | { readonly kind: "play" }
+  | {
+      readonly kind: "placement";
+      readonly round: number;
+      /** Mines each player places this round. */
+      readonly quota: number;
+      readonly ready: { readonly w: boolean; readonly b: boolean };
+    };

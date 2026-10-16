@@ -21,7 +21,7 @@ interface FinishTurnInput {
   readonly work: Working;
   readonly move: Move;
   readonly mover: Color;
-  /** True if a landing destroyed a piece. */
+  /** True if a landing destroyed a piece of the mover's (in a big-mine blast, any of them). */
   readonly destroyed: boolean;
 }
 
@@ -44,6 +44,13 @@ export function finishTurn(input: FinishTurnInput): TurnEnd {
   // before any check or mate is considered, even if the same move would mate the opponent.
   if (work.lives[mover] === 0) {
     const status = over(opponent(mover), "king-lives", work);
+    return { position: afterLandings, status, checkException: null };
+  }
+
+  // 3.10: a blast can also take the opponent's last king life, which ends the game in the
+  // mover's favour (both kings dying was caught above: the mover loses).
+  if (work.lives[opponent(mover)] === 0) {
+    const status = over(mover, "king-lives", work);
     return { position: afterLandings, status, checkException: null };
   }
 
