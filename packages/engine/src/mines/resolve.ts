@@ -1,11 +1,10 @@
 import { applyMove } from "../chess/apply";
-import { isInCheck, KING_STEPS } from "../chess/attacks";
+import { isInCheck } from "../chess/attacks";
 import type { Move } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
-import { offsetSquare } from "../chess/square";
-import type { Position, Square } from "../chess/types";
+import type { Position } from "../chess/types";
 import type { GameEvent } from "./events";
-import { adjacentMineCount } from "./numbers";
+import { resolveLanding, type Working } from "./landing";
 import type { GameState } from "./state";
 
 /** The move is not a legal chess move in the current position. */
@@ -60,73 +59,42 @@ export function resolveMove(state: GameState, move: Move): Resolution {
   const landed = moved.board[to];
   if (landed == null) throw new Error("Moving piece missing after applyMove");
   const mover = landed.color;
-  const events: GameEvent[] = [{ type: "MoveMade", color: mover, move: legal }];
+
+  const work: Working = {
+    board: moved.board.slice(),
+    mines: new Set(state.hidden.mines),
+    craters: new Set(state.public.craters),
+    revealed: new Set(state.public.revealed),
+    lives: { ...state.public.lives },
+    events: [{ type: "MoveMade", color: mover, move: legal }],
+  };
   if (legal.captured !== null && legal.captureSquare !== null) {
-    events.push({ type: "PieceCaptured", square: legal.captureSquare, piece: legal.captured });
+    work.events.push({ type: "PieceCaptured", square: legal.captureSquare, piece: legal.captured });
   }
 
-  const mines = new Set(state.hidden.mines);
-  const craters = new Set(state.public.craters);
-  const revealed = new Set(state.public.revealed);
-  let lives = state.public.lives;
   let position: Position = moved;
-
-  if (!mines.has(to)) {
-    // Survived: reveal the square (3.2). Revealing a 0 reveals only itself (no flood fill).
-    if (!revealed.has(to)) {
-      revealed.add(to);
-      events.push({ type: "NumberRevealed", square: to, number: adjacentMineCount(mines, to) });
+  const outcome = resolveLanding(work, to, landed, legal.captured !== null);
+  if (outcome === "destroyed") {
+    // 3.4: the move is wasted. A destroyed double-pushed pawn sets no en passant target.
+    position = { ...moved, board: work.board, enPassant: null };
+    if (isInCheck(position, mover)) {
+      throw new NotYetSupportedError("check exception after an explosion");
     }
-  } else {
-    if (legal.captured !== null) throw new Error("Invariant violated: a mine under a piece");
-    mines.delete(to);
-    craters.add(to);
-    events.push({ type: "MineTriggered", square: to, by: landed });
-
-    if (landed.type === "k") {
-      // 3.6: lose one life, the mine is consumed, the king stays and so survives the landing.
-      const livesLeft = lives[mover] - 1;
-      lives = { ...lives, [mover]: livesLeft };
-      events.push({ type: "LifeLost", color: mover, square: to, livesLeft });
-      revealed.add(to);
-      events.push({ type: "NumberRevealed", square: to, number: adjacentMineCount(mines, to) });
-    } else {
-      // 3.4: the piece is destroyed and the move wasted. A destroyed double-pushed pawn
-      // sets no en passant target.
-      const board = moved.board.slice();
-      board[to] = null;
-      position = { ...moved, board, enPassant: null };
-      events.push({ type: "PieceDestroyed", square: to, piece: landed });
-      if (isInCheck(position, mover)) {
-        throw new NotYetSupportedError("check exception after an explosion");
-      }
-    }
-
-    // Revealed numbers are live: neighbours of the consumed mine drop by one (3.2).
-    const updates = revealedNeighbours(state.public.revealed, to).map((square) => ({
-      square,
-      number: adjacentMineCount(mines, square),
-    }));
-    if (updates.length > 0) events.push({ type: "NumbersChanged", updates });
   }
 
-  events.push({ type: "TurnPassed", to: position.turn });
+  work.events.push({ type: "TurnPassed", to: position.turn });
   return {
     state: {
       ...state,
       position,
-      public: { ...state.public, revealed, craters, lives },
-      hidden: { mines },
+      public: {
+        ...state.public,
+        revealed: work.revealed,
+        craters: work.craters,
+        lives: { w: work.lives.w, b: work.lives.b },
+      },
+      hidden: { mines: work.mines },
     },
-    events,
+    events: work.events,
   };
-}
-
-function revealedNeighbours(revealed: ReadonlySet<Square>, square: Square): Square[] {
-  const result: Square[] = [];
-  for (const [df, dr] of KING_STEPS) {
-    const neighbour = offsetSquare(square, df, dr);
-    if (neighbour !== null && revealed.has(neighbour)) result.push(neighbour);
-  }
-  return result;
 }
