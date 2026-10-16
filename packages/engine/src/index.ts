@@ -18,3 +18,5 @@ export { createGame, type CreateGameOptions } from "./mines/setup";
 export * from "./mines/numbers";
 export * from "./mines/events";
 export * from "./mines/resolve";
+export * from "./view/types";
+export { toPublicView, projectEvents } from "./view/public";

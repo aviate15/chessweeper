@@ -24,3 +24,8 @@ export function revealedNumbers(state: GameState): Map<Square, number> {
   }
   return numbers;
 }
+
+/** How many live mines are on the board. Public information (design doc 3.2). */
+export function liveMineCount(state: GameState): number {
+  return state.hidden.mines.size;
+}
