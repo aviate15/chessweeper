@@ -1,5 +1,13 @@
-import type { Color, GameConfig, EventView, Flags, Move, Square } from "@chessweeper/engine";
-import type { GameOverWithOwned, PlacementView } from "./components/placementTypes";
+import type {
+  Color,
+  GameConfig,
+  EventView,
+  Flags,
+  GameOverView,
+  Move,
+  PublicView,
+  Square,
+} from "@chessweeper/engine";
 
 /** Manual mine mode (3.10): what the placement screen needs besides the view. */
 export interface PlacementControl {
@@ -15,9 +23,8 @@ export interface PlacementControl {
  */
 export interface GameController {
   readonly mode: "local" | "online";
-  /** PlacementView is the public view plus `phase` and `placement` (3.10). */
-  readonly view: PlacementView;
-  readonly gameOver: GameOverWithOwned | null;
+  readonly view: PublicView;
+  readonly gameOver: GameOverView | null;
   /** The private flags to show. */
   readonly flags: Flags;
   readonly lastEvents: readonly EventView[];

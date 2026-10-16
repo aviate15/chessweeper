@@ -128,7 +128,7 @@ export function GameScreen({
 
   const over = view.status.kind === "over";
   /** Manual mine mode (3.10): a placement round replaces the board and info bar. */
-  const placementCtl = !over && view.placement !== null ? game.placement : null;
+  const placementCtl = !over && view.placement != null ? game.placement : null;
   const placing = placementCtl !== null;
   const autoPlacedText =
     game.autoPlaced !== null && game.autoPlaced > 0
@@ -251,7 +251,7 @@ export function GameScreen({
   /** Manual placement: toggle one of my mines; a full quota only explains itself. */
   const onPlacementToggle = (square: Square) => {
     const info = view.placement;
-    if (info === null) return;
+    if (info == null) return;
     const own = info.own ?? [];
     if (!own.includes(square) && own.length >= info.quota) {
       setHint(

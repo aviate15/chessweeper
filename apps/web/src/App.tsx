@@ -1,6 +1,6 @@
 import "@fontsource/silkscreen/400.css";
 import "@fontsource/silkscreen/700.css";
-import { opponent, type Rng } from "@chessweeper/engine";
+import { opponent, phaseOf, type Rng } from "@chessweeper/engine";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { LobbyDialog } from "./components/LobbyDialog";
 import { Dialog } from "./components/Dialog";
@@ -127,7 +127,7 @@ export function App({ rng, gate = true, createOnlineClient }: AppProps) {
       handoffTo: null,
       handoffPlacing: false,
       placement:
-        online.view.phase.kind === "placement" && online.view.placement
+        phaseOf(online.view).kind === "placement" && online.view.placement
           ? { color: seat, msLeft: online.placementMsLeft }
           : null,
       autoPlaced: online.autoPlaced,

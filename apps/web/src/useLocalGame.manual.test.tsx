@@ -3,6 +3,7 @@ import {
   configFromSettings,
   createSeededRng,
   legalMovesFromView,
+  phaseOf,
   type Square,
 } from "@chessweeper/engine";
 import { describe, expect, it } from "vitest";
@@ -20,7 +21,7 @@ function start() {
 describe("useLocalGame in Manual mine mode", () => {
   it("runs White, handoff, Black, handoff, then play", () => {
     const { result } = start();
-    expect(result.current.view.phase.kind).toBe("placement");
+    expect(phaseOf(result.current.view).kind).toBe("placement");
     expect(result.current.placingColor).toBe("w");
     expect(result.current.view.placement?.quota).toBe(5);
     expect(result.current.handoffTo).toBeNull();
@@ -50,7 +51,7 @@ describe("useLocalGame in Manual mine mode", () => {
     act(() => {
       result.current.donePlacement();
     });
-    expect(result.current.view.phase.kind).toBe("play");
+    expect(phaseOf(result.current.view).kind).toBe("play");
     expect(result.current.handoffTo).toBe("w");
     expect(result.current.handoffPlacing).toBe(false);
     expect(result.current.view.mineCount).toBe(10);
@@ -72,9 +73,9 @@ describe("useLocalGame in Manual mine mode", () => {
     act(() => {
       result.current.dismissHandoff();
     });
-    expect(result.current.view.phase.kind).toBe("play");
+    expect(phaseOf(result.current.view).kind).toBe("play");
 
-    for (let i = 0; i < 12 && result.current.view.phase.kind === "play"; i++) {
+    for (let i = 0; i < 12 && phaseOf(result.current.view).kind === "play"; i++) {
       const move = legalMovesFromView(result.current.view).find((m) => m.captured === null);
       if (!move) throw new Error("no quiet move");
       act(() => {
@@ -84,8 +85,8 @@ describe("useLocalGame in Manual mine mode", () => {
         result.current.dismissHandoff();
       });
     }
-    expect(result.current.view.phase.kind).toBe("placement");
-    expect(result.current.view.phase).toMatchObject({ round: 2 });
+    expect(phaseOf(result.current.view).kind).toBe("placement");
+    expect(phaseOf(result.current.view)).toMatchObject({ round: 2 });
     expect(result.current.placingColor).toBe("w");
     expect(result.current.view.mineCount).toBe(0);
     expect(result.current.view.placement?.own).toEqual([]);
@@ -100,13 +101,13 @@ describe("useLocalGame in Manual mine mode", () => {
       error = result.current.play(move);
     });
     expect(error).not.toBeNull();
-    expect(result.current.view.phase.kind).toBe("placement");
+    expect(phaseOf(result.current.view).kind).toBe("placement");
   });
 
   it("an Auto game is unchanged: play from the start, no placement", () => {
     const { result } = renderHook(() => useLocalGame({ rng: createSeededRng(9) }));
-    expect(result.current.view.phase.kind).toBe("play");
-    expect(result.current.view.placement).toBeNull();
+    expect(phaseOf(result.current.view).kind).toBe("play");
+    expect(result.current.view.placement ?? null).toBeNull();
     expect(result.current.placingColor).toBeNull();
     expect(result.current.autoPlaced).toBeNull();
   });

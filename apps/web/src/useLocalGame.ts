@@ -5,6 +5,7 @@ import {
   markReady,
   noFlags,
   opponent,
+  phaseOf,
   placeMine,
   projectEvents,
   toGameOverView,
@@ -17,15 +18,16 @@ import {
   type EventView,
   type Flags,
   type GameConfig,
+  type GameOverView,
   type GameEvent,
   type GameState,
   type Move,
+  type PublicView,
   type Rng,
   type SafeError,
   type Square,
 } from "@chessweeper/engine";
 import { useCallback, useRef, useState } from "react";
-import type { GameOverWithOwned, PlacementView } from "./components/placementTypes";
 import {
   declineDraw,
   initialOffers,
@@ -43,8 +45,8 @@ interface AutoPlaced {
 }
 
 interface Snapshot {
-  readonly view: PlacementView;
-  readonly gameOver: GameOverWithOwned | null;
+  readonly view: PublicView;
+  readonly gameOver: GameOverView | null;
   /** Private flags, one set per colour (3.3). */
   readonly flags: { readonly w: Flags; readonly b: Flags };
   readonly offers: OfferState;
@@ -61,8 +63,8 @@ interface Snapshot {
 
 export interface LocalGame {
   /** Everything the UI renders from: the public view, never the raw engine state. */
-  readonly view: PlacementView;
-  readonly gameOver: GameOverWithOwned | null;
+  readonly view: PublicView;
+  readonly gameOver: GameOverView | null;
   /** The flags of the side to move (the only ones ever shown). */
   readonly flags: Flags;
   readonly offers: OfferState;
@@ -105,46 +107,13 @@ function placerOf(state: GameState): Color | null {
   return phase.ready.w ? "b" : "w";
 }
 
-/**
- * The public view plus the placement fields, with the current placer's own draft.
- * M-B-RECONCILE: the engine's `toPublicView(state, viewer)` will carry `phase` and `placement`
- * itself (own = the viewer's draft); until then local play reads the draft from the state.
- */
-function viewOf(state: GameState): PlacementView {
-  const view = toPublicView(state, null);
-  const phase = state.public.phase;
-  const placer = placerOf(state);
-  if (phase.kind !== "placement" || placer === null) return { ...view, phase, placement: null };
-  const draft = state.hidden.drafts?.[placer] ?? new Set<Square>();
-  return {
-    ...view,
-    phase,
-    placement: {
-      quota: phase.quota,
-      ready: { w: phase.ready.w, b: phase.ready.b },
-      own: [...draft].sort((a, b) => a - b),
-    },
-  };
+/** The view for the device: during placement it carries the current placer's own draft. */
+function viewOf(state: GameState): PublicView {
+  return toPublicView(state, placerOf(state));
 }
 
-/**
- * The game-over view with who placed which mine.
- * M-B-RECONCILE: `toGameOverView` will return `owned` itself.
- */
-function gameOverOf(state: GameState): GameOverWithOwned | null {
-  const over = toGameOverView(state, null);
-  if (over === null) return null;
-  const owned = state.hidden.owned;
-  return {
-    ...over,
-    view: viewOf(state),
-    owned: owned
-      ? {
-          w: [...owned.w].sort((a, b) => a - b),
-          b: [...owned.b].sort((a, b) => a - b),
-        }
-      : null,
-  };
+function gameOverOf(state: GameState): GameOverView | null {
+  return toGameOverView(state, null);
 }
 
 function snapshotOf(
@@ -165,15 +134,16 @@ function snapshotOf(
   };
 }
 
-/** The random-fill counts (viewer-only `MinesAutoPlaced` events), or null when none were needed. */
+/** The random-fill counts (each placer's own `MinesAutoPlaced` event), or null when none. */
 function autoPlacedOf(events: readonly GameEvent[]): AutoPlaced | null {
-  let w = 0;
-  let b = 0;
-  for (const event of events) {
-    if (event.type !== "MinesAutoPlaced") continue;
-    if (event.color === "w") w = event.count;
-    else b = event.count;
-  }
+  const countFor = (viewer: Color): number => {
+    for (const event of projectEvents(events, viewer)) {
+      if (event.type === "MinesAutoPlaced" && event.color === viewer) return event.count;
+    }
+    return 0;
+  };
+  const w = countFor("w");
+  const b = countFor("b");
   return w > 0 || b > 0 ? { w, b } : null;
 }
 
@@ -201,7 +171,7 @@ export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
         const next = snapshotOf(result.resolution.state, prev);
         // 3.10: a reshuffle in Manual mode starts a placement round, White first. Black, who
         // just moved, passes the device to White; White just keeps it.
-        const placing = next.view.phase.kind === "placement";
+        const placing = phaseOf(next.view).kind === "placement";
         const handoffTo = placing
           ? mover === "b"
             ? "w"
@@ -295,7 +265,7 @@ export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
     placingColor,
     actor,
     autoPlaced:
-      snap.view.phase.kind === "play" && snap.autoPlaced && snap.autoPlaced[turn] > 0
+      phaseOf(snap.view).kind === "play" && snap.autoPlaced && snap.autoPlaced[turn] > 0
         ? snap.autoPlaced[turn]
         : null,
     play,

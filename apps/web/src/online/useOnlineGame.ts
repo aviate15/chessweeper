@@ -5,18 +5,19 @@ import {
   type Color,
   type EventView,
   type Flags,
+  type GameOverView,
   type GameSettings,
+  type PublicView,
+  phaseOf,
   type Move,
   type Square,
 } from "@chessweeper/engine";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import type { GameOverWithOwned, PlacementView } from "../components/placementTypes";
 import { OnlineClient, type ClientEvent, type ConnectionState } from "./client";
 import { serverUrl } from "./config";
 import { FATAL_MESSAGES, friendlyError, type FatalReason } from "./errors";
 import { flagsAfterSnapshot } from "./flags";
 import { browserSocket } from "./socket";
-import { gameOverFromWire, settingsFromWire, splitEvents, viewFromWire } from "./wire";
 import {
   clearGame,
   loadCurrent,
@@ -43,8 +44,8 @@ interface State {
   /** The game's settings, known from `joined` (before the first snapshot). */
   readonly settings: GameSettings | null;
   readonly seat: Color | null;
-  readonly view: PlacementView | null;
-  readonly gameOver: GameOverWithOwned | null;
+  readonly view: PublicView | null;
+  readonly gameOver: GameOverView | null;
   readonly flags: Flags;
   /** How much of the move log the flags have seen; null before a game is joined. */
   readonly flagsLogLength: number | null;
@@ -64,8 +65,7 @@ interface State {
   readonly noticeCounter: number;
   /**
    * Manual mine mode (3.10): when the placement round ends, from the server's `placement`
-   * message (`msLeft` at receipt). M-C-RECONCILE: relies on the server sending it at round
-   * start and in every snapshot during a round.
+   * message (`msLeft` at receipt), sent at round start, on join and on reconnect.
    */
   readonly placementEndsAt: number | null;
   /** My placements as I made them, until the server's next view replaces them. */
@@ -135,7 +135,7 @@ function onClientEvent(state: State, event: ClientEvent): State {
     case "joined":
       return state; // handled through the `joined` action, which carries stored flags
     case "snapshot": {
-      const view = viewFromWire(event.view);
+      const view = event.view;
       return {
         ...state,
         view,
@@ -145,39 +145,43 @@ function onClientEvent(state: State, event: ClientEvent): State {
         flagsLogLength: view.log.length,
         ownOverride: null,
         doneSent: false,
-        placementEndsAt: view.phase.kind === "placement" ? state.placementEndsAt : null,
+        placementEndsAt: phaseOf(view).kind === "placement" ? state.placementEndsAt : null,
       };
     }
     case "update": {
-      const view = viewFromWire(event.view);
-      const split = splitEvents(event.events, state.seat);
-      const moved = split.events.some((e) => e.type === "MoveMade");
-      const mine = split.events.some((e) => e.type === "MoveMade" && e.color === state.seat);
-      const newRound = split.events.some((e) => e.type === "PlacementStarted");
+      const view = event.view;
+      // MinesAutoPlaced reaches only the seat it names: my own random-fill count (3.10).
+      const events = event.events.filter((e) => e.type !== "MinesAutoPlaced");
+      const filled = event.events.find(
+        (e) => e.type === "MinesAutoPlaced" && e.color === state.seat,
+      );
+      const autoPlaced = filled?.type === "MinesAutoPlaced" ? filled.count : null;
+      const moved = events.some((e) => e.type === "MoveMade");
+      const mine = events.some((e) => e.type === "MoveMade" && e.color === state.seat);
+      const newRound = events.some((e) => e.type === "PlacementStarted");
       return {
         ...state,
         view,
-        lastEvents: split.events,
+        lastEvents: events,
         turnId: state.turnId + 1,
         pending: false,
         // 3.6: any move lapses a pending offer; the offerer may offer again after moving.
         // Placement updates (a player got ready) are not moves.
         draw: moved ? "none" : state.draw,
         mustMove: mine ? false : state.mustMove,
-        flags: flagsAfterEvents(state.flags, split.events),
+        flags: flagsAfterEvents(state.flags, events),
         flagsLogLength: view.log.length,
         ownOverride: null,
         doneSent: false,
-        placementEndsAt: view.phase.kind === "placement" ? state.placementEndsAt : null,
+        placementEndsAt: phaseOf(view).kind === "placement" ? state.placementEndsAt : null,
         // The random-fill notice stays until I move or the next round starts.
-        autoPlaced: split.autoPlaced ?? (mine || newRound ? null : state.autoPlaced),
+        autoPlaced: autoPlaced ?? (mine || newRound ? null : state.autoPlaced),
       };
     }
     case "placement":
       return { ...state, placementEndsAt: Date.now() + event.msLeft };
     case "game_over": {
-      const over = gameOverFromWire(event.over);
-      return { ...state, view: over.view, gameOver: over, pending: false };
+      return { ...state, view: event.over.view, gameOver: event.over, pending: false };
     }
     case "opponent":
       return { ...state, opponent: event.state };
@@ -248,8 +252,8 @@ export interface OnlineGame {
   readonly code: string | null;
   readonly settings: GameSettings | null;
   /** The server's view with my own pending placement edits applied (3.10). */
-  readonly view: PlacementView | null;
-  readonly gameOver: GameOverWithOwned | null;
+  readonly view: PublicView | null;
+  readonly gameOver: GameOverView | null;
   readonly flags: Flags;
   readonly lastEvents: readonly EventView[];
   /** Increments per update from the server (a move or an ending); snapshots do not count. */
@@ -332,7 +336,7 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
             t: "joined",
             code: event.code,
             seat: event.seat,
-            settings: settingsFromWire(event.settings),
+            settings: event.settings,
             stored: stored && { flags: new Set(stored.squares), logLength: stored.logLength },
           });
           return;
@@ -454,7 +458,12 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
     const client = clientRef.current;
     const current = stateRef.current;
     const placement = current.view?.placement;
-    if (client === null || current.view?.phase.kind !== "placement" || !placement) return;
+    if (
+      client === null ||
+      (current.view && phaseOf(current.view).kind) !== "placement" ||
+      !placement
+    )
+      return;
     if (placement.ready[current.seat ?? "w"] || current.doneSent) return;
     const own = current.ownOverride ?? placement.own ?? [];
     if (own.includes(square)) {
@@ -489,10 +498,11 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
           ? "waiting"
           : "playing";
   const playing = phase === "playing";
-  const placing = state.view?.phase.kind === "placement" && phase === "playing";
+  const placing =
+    state.view !== null && phaseOf(state.view).kind === "placement" && phase === "playing";
 
   // My own placement edits show at once, before the server confirms them (3.10).
-  const view = useMemo((): PlacementView | null => {
+  const view = useMemo((): PublicView | null => {
     const base = state.view;
     if (!base?.placement) return base;
     const seat = state.seat;
@@ -539,7 +549,7 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
     canMove:
       playing &&
       state.view !== null &&
-      state.view.phase.kind === "play" &&
+      phaseOf(state.view).kind === "play" &&
       state.view.turn === state.seat &&
       !state.pending,
     placementMsLeft,

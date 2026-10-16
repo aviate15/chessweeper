@@ -13,7 +13,7 @@ import { OnlineClient, type SocketLike } from "./online/client";
 import { FakeSocket, FakeTimers } from "./online/testkit";
 
 // 3.10 Manual mine mode: online client behaviour against fake server messages
-// M-C-RECONCILE: message shapes follow packages/protocol; the real server is M-C's.
+// Message shapes follow packages/protocol.
 
 const CODE = "ABCDEF";
 const SETTINGS = { reshuffleInterval: 10, densityPercent: 30, mode: "manual" } as const;
@@ -159,6 +159,16 @@ describe("online Manual mine placement", () => {
     expect(screen.getByTestId("placement-placed")).toHaveTextContent("2");
     expect(t.sq("e3")).toHaveAttribute("data-mine-kind", "w");
     expect(screen.getByText("Opponent ready")).toBeInTheDocument();
+  });
+
+  it("replaces the view with the placer-only snapshot sent at the same seq after a placement", async () => {
+    const t = setup();
+    await t.join();
+    await t.user.click(t.sq("e4"));
+    // M-C answers place/unplace with a snapshot carrying the same seq as before.
+    t.receive({ type: "snapshot", seq: 0, view: placingView([28, 29]) });
+    expect(screen.getByTestId("placement-placed")).toHaveTextContent("2");
+    expect(t.sq("f4")).toHaveAttribute("data-mine-kind", "w");
   });
 
   it("shows a friendly message for a placement error and rolls back the optimistic mark", async () => {

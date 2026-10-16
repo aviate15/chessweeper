@@ -1,10 +1,9 @@
-import type { Color, Flags, Square as Sq } from "@chessweeper/engine";
+import type { Color, Flags, PublicView, Square as Sq } from "@chessweeper/engine";
 import type { ReactNode } from "react";
 import { playCue } from "../audio";
 import { COLOR_NAME } from "../narration";
 import { Board } from "./Board";
 import { Led } from "./Led";
-import type { PlacementView } from "./placementTypes";
 
 const NO_FLAGS: Flags = new Set<Sq>();
 const NO_SQUARES: readonly Sq[] = [];
@@ -13,7 +12,7 @@ const NO_SQUARES: readonly Sq[] = [];
 export const COUNTDOWN_WARN_SECONDS = 5;
 
 export interface PlacementScreenProps {
-  view: PlacementView;
+  view: PublicView;
   /** Milliseconds left in the round, or null when there is no timer (local play). */
   msLeft: number | null;
   onToggle: (square: Sq) => void;

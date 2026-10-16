@@ -1,4 +1,10 @@
-import { DEFAULT_SETTINGS, createGame, createSeededRng, toPublicView } from "@chessweeper/engine";
+import {
+  DEFAULT_SETTINGS,
+  createGame,
+  createSeededRng,
+  toPublicView,
+  type PublicView,
+} from "@chessweeper/engine";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -8,13 +14,13 @@ import { HandoffScreen } from "./HandoffScreen";
 import { PlacementScreen } from "./PlacementScreen";
 import { RulesDialog } from "./RulesDialog";
 import { SettingsFields } from "./SettingsFields";
-import { placementQuota, type GameMode, type PlacementView } from "./placementTypes";
+import { placementQuota, type GameMode } from "./placementTypes";
 
 // 3.10 manual mine mode (UI building blocks)
 
 const base = toPublicView(createGame({ rng: createSeededRng(3) }), "w");
 
-const view = (own: number[], ready = { w: false, b: false }, quota = 5): PlacementView => ({
+const view = (own: number[], ready = { w: false, b: false }, quota = 5): PublicView => ({
   ...base,
   phase: { kind: "placement", round: 1, quota, ready },
   placement: { quota, ready, own },

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { BigMineBlastedEvent } from "./components/placementTypes";
+import type { EventView } from "@chessweeper/engine";
 import { BLAST_RING_MS, MAX_BLOCKING_MS, presentationFor } from "./presentation";
 
 // 3.10 big mine blast
 
-const blast: BigMineBlastedEvent = {
+const blast: Extract<EventView, { type: "BigMineBlasted" }> = {
   type: "BigMineBlasted",
   square: 28,
   by: { color: "w", type: "n" },
