@@ -265,6 +265,71 @@ describe("room expiry", () => {
   });
 });
 
+describe("finished rooms", () => {
+  it("frees a room finishedRoomMs after a resign, closing both sockets", async () => {
+    const hh = await start();
+    const { a, b } = await twoPlayers(hh);
+    a.send({ type: "resign" });
+    await a.next("game_over");
+    await b.next("game_over");
+    hh.clock.advance(119_000);
+    expect(hh.server.roomCount()).toBe(1);
+    hh.clock.advance(1_000);
+    expect(hh.server.roomCount()).toBe(0);
+    expect(await a.closed).toBe(1001);
+    expect(await b.closed).toBe(1001);
+  });
+
+  it("frees a room after an agreed draw, using a custom window", async () => {
+    const hh = await start({ limits: { finishedRoomMs: 5_000 } });
+    const { a, b } = await twoPlayers(hh);
+    a.send({ type: "draw_offer" });
+    await b.next("draw");
+    b.send({ type: "draw_reply", accept: true });
+    await a.next("game_over");
+    hh.clock.advance(5_000);
+    expect(hh.server.roomCount()).toBe(0);
+  });
+
+  it("lets a player reload the result within the window", async () => {
+    const hh = await start();
+    const { a, ja } = await twoPlayers(hh);
+    a.send({ type: "resign" });
+    await a.next("game_over");
+    await a.close();
+    hh.clock.advance(60_000);
+    const a2 = await hh.connect();
+    await a2.join(ja.code, ja.token);
+    expect((await a2.next("game_over")).over.view.status.kind).toBe("over");
+  });
+
+  it("does not extend the window on later activity or reconnects", async () => {
+    const hh = await start();
+    const { a, ja } = await twoPlayers(hh);
+    a.send({ type: "resign" });
+    await a.next("game_over");
+    hh.clock.advance(90_000);
+    a.send({ type: "ping" });
+    a.send({ type: "move", seq: 1, from: E2, to: E4 });
+    await a.next("error");
+    await a.close();
+    const a2 = await hh.connect();
+    await a2.join(ja.code, ja.token);
+    hh.clock.advance(30_000);
+    expect(hh.server.roomCount()).toBe(0);
+  });
+
+  it("frees the per-IP slot when the finished room is removed", async () => {
+    const hh = await start({ limits: { maxRoomsPerIp: 1 } });
+    const { a } = await twoPlayers(hh);
+    a.send({ type: "resign" });
+    await a.next("game_over");
+    hh.clock.advance(120_000);
+    const c = await hh.connect();
+    await c.create();
+  });
+});
+
 describe("hardening", () => {
   it("rejects a missing or unknown Origin on upgrade", async () => {
     const hh = await start();
@@ -392,6 +457,7 @@ describe("hardening", () => {
     hh.clock.advance(30 * 60_000);
     const text = hh.logs.join("\n");
     expect(hh.logs.length).toBeGreaterThan(0);
+    expect(text).not.toContain("127.0.0.1");
     for (const secret of [ja.token, jb.token, ja.code, "w".repeat(43)]) {
       expect(text).not.toContain(secret);
     }
@@ -400,7 +466,11 @@ describe("hardening", () => {
   it("serves /healthz and 404s everything else over plain HTTP", async () => {
     const hh = await start();
     const base = hh.url.replace("ws:", "http:");
-    expect((await fetch(`${base}/healthz`)).status).toBe(200);
+    const health = await fetch(`${base}/healthz`);
+    expect(health.status).toBe(200);
+    expect(health.headers.get("cache-control")).toBe("no-store");
+    expect((await fetch(`${base}/healthz`, { method: "HEAD" })).status).toBe(200);
+    expect((await fetch(`${base}/healthz`, { method: "POST" })).status).toBe(404);
     expect((await fetch(`${base}/anything`)).status).toBe(404);
   });
 });

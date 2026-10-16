@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CODE_ALPHABET } from "@chessweeper/protocol";
 import { loadConfig } from "./config";
 import { createCryptoRng, newInviteCode, newSeatToken, tokensEqual } from "./crypto";
-import { TokenBucket } from "./limits";
+import { DEFAULT_LIMITS, TokenBucket } from "./limits";
 import { createLogger } from "./log";
 
 describe("crypto", () => {
@@ -63,13 +63,45 @@ describe("loadConfig", () => {
   });
 });
 
+describe("loadConfig limits", () => {
+  it("leaves limits unset by default and parses each env var", () => {
+    expect(loadConfig({}).limits).toEqual({});
+    expect(
+      loadConfig({
+        MAX_ROOMS_PER_IP: "50",
+        MAX_CONNS_PER_IP: "200",
+        MAX_ROOMS: "500",
+        FINISHED_ROOM_MS: "30000",
+      }).limits,
+    ).toEqual({
+      maxRoomsPerIp: 50,
+      maxConnectionsPerIp: 200,
+      maxRooms: 500,
+      finishedRoomMs: 30000,
+    });
+    expect(loadConfig({ MAX_ROOMS_PER_IP: " " }).limits).toEqual({});
+  });
+
+  it("rejects values that are not positive integers", () => {
+    for (const bad of ["0", "-1", "1.5", "abc"]) {
+      expect(() => loadConfig({ MAX_ROOMS_PER_IP: bad })).toThrow("Invalid MAX_ROOMS_PER_IP");
+    }
+    expect(() => loadConfig({ FINISHED_ROOM_MS: "0" })).toThrow();
+  });
+
+  it("defaults are generous for shared IPs", () => {
+    expect(DEFAULT_LIMITS.maxRoomsPerIp).toBeGreaterThanOrEqual(30);
+    expect(DEFAULT_LIMITS.maxConnectionsPerIp).toBeGreaterThanOrEqual(100);
+  });
+});
+
 describe("logger", () => {
   it("redacts secret-looking fields", () => {
     const lines: string[] = [];
     createLogger((l) => lines.push(l)).info("x", { token: "abc", code: "ZZZZZZ", ip: "1.2.3.4" });
     expect(lines[0]).not.toContain("abc");
     expect(lines[0]).not.toContain("ZZZZZZ");
-    expect(lines[0]).toContain("1.2.3.4");
+    expect(lines[0]).not.toContain("1.2.3.4");
   });
 });
 
