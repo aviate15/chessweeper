@@ -180,10 +180,15 @@ A second game mode. **Auto mine** is everything above, unchanged. In **Manual mi
 - `[D]` A big mine is not consumed by the piece alone: any landing on it **blasts the 3x3 area** around it (clipped at the board edge). The blast destroys every non-king piece in the area, both sides' and the mover's included. Every king in the area loses exactly **1** life and stays on its square. Every square in the area becomes a crater and every mine in the area is consumed. There is **no chain reaction**.
 - `[D]` If the blast takes the last life of both kings, the **mover loses** (3.6 precedence).
 - `[T]` Only a king that lands on the big mine and survives reveals that square (3.2). Pieces and kings merely caught in the area reveal nothing.
-- `[T]` After a blast, the check exception (3.4) applies if the mover's piece was destroyed and the mover's own king is in check. Otherwise check, checkmate and stalemate are evaluated for the opponent on the board left by the blast. If the blast leaves the *opponent* in check, that is ordinary check.
+- `[T]` After a blast, the check exception (3.4) applies if the mover's piece was destroyed and the mover's own king is in check. Otherwise check, checkmate and stalemate are evaluated for the opponent on the board left by the blast. If the blast leaves the _opponent_ in check, that is ordinary check.
 - `[T]` Blast kills are not captures: the no-capture counter is not reset (3.7). A turn with a blast counts as a normal turn.
 - `[T]` Castling lands the king first. If the king's blast destroys the castling rook, the rook move does not happen. A rook landing on a big mine blasts like any piece.
 - `[T]` En passant: the captured pawn is removed first, then the capturer's landing resolves, blast included.
+- `[T]` A pawn destroyed by a blast on its promotion square does not promote and is reported as a pawn (3.5).
+- `[T]` If a blast takes only the opponent's king to 0 lives, the opponent loses (3.6); if it takes both kings' last lives, the mover loses.
+- `[T]` Random fill (timeout or Done with fewer than the quota) picks any empty square not already in the player's own draft, so it can land on an opponent's square and make a big mine by chance.
+- `[T]` Between a reshuffle and the end of the next placement round there are no live mines: the live mine count reads 0 and `Reshuffled` reports 0.
+- `[T]` The placement phase (round, quota, who is ready) is part of the public state, so a reconnecting client sees it.
 
 ---
 
