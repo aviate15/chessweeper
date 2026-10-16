@@ -223,7 +223,7 @@ describe("placement timer", () => {
     });
     // Moves are rejected while round 2 is open.
     a.send({ type: "move", seq: seq + 2, ...E2E4 });
-    expect((await a.next("error")).code).toBe("not-placing");
+    expect((await a.next("error")).code).toBe("not-playing");
     h?.clock.advance(PLACEMENT_MS);
     const done = await a.next("update", (m) => eventTypes(m).includes("PlacementEnded"));
     expect(done.view.phase).toEqual({ kind: "play" });
@@ -329,9 +329,9 @@ describe("placement errors and privacy of draft traffic", () => {
   it("rejects moves during placement", async () => {
     const { a, b } = await start(MANUAL);
     a.send({ type: "move", seq: 0, ...E2E4 });
-    expect((await a.next("error")).code).toBe("not-placing");
+    expect((await a.next("error")).code).toBe("not-playing");
     b.send({ type: "move", seq: 0, from: 52, to: 36 });
-    expect((await b.next("error")).code).toBe("not-placing");
+    expect((await b.next("error")).code).toBe("not-playing");
   });
 
   it("rejects place messages in an auto game and once play has started", async () => {

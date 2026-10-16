@@ -101,7 +101,7 @@ describe("manual mode server messages", () => {
   it("validates game_over owned", () => {
     const over = { view, mines: [1, 2] };
     expect(ok({ type: "game_over", over })).toBe(true);
-    expect(ok({ type: "game_over", over: { ...over, owned: null } })).toBe(true);
+    expect(ok({ type: "game_over", over: { ...over, owned: null } })).toBe(false);
     expect(ok({ type: "game_over", over: { ...over, owned: { w: [1], b: [2] } } })).toBe(true);
     expect(ok({ type: "game_over", over: { ...over, owned: { w: [64], b: [] } } })).toBe(false);
     expect(ok({ type: "game_over", over: { ...over, owned: { w: [1] } } })).toBe(false);

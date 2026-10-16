@@ -105,36 +105,43 @@ const placement = z.strictObject({
 
 const fallen = z.array(z.strictObject({ piece: pieceType, cause: z.enum(["capture", "mine"]) }));
 
-const publicView = z.strictObject({
-  viewer: color.nullable(),
-  board: z.array(pieceView.nullable()).length(64),
-  turn: color,
-  castling: z.strictObject({
-    wK: z.boolean(),
-    wQ: z.boolean(),
-    bK: z.boolean(),
-    bQ: z.boolean(),
-  }),
-  enPassant: square.nullable(),
-  fullmoveNumber: z.number().int().min(1),
-  lives: z.strictObject({ w: count, b: count }),
-  revealed: z.array(numberView),
-  craters: z.array(square),
-  mineCount: count,
-  settings,
-  turnsUntilReshuffle: count,
-  status: z.discriminatedUnion("kind", [
-    z.strictObject({ kind: z.literal("ongoing") }),
-    z.strictObject({ kind: z.literal("over"), result, reason }),
-  ]),
-  checkException: color.nullable(),
-  inCheck: z.boolean(),
-  log: z.array(z.strictObject({ color, events: z.array(eventView) })),
-  fallen: z.strictObject({ w: fallen, b: fallen }),
-  // Manual mine mode only (3.10): both omitted in Auto games.
-  phase: phase.optional(),
-  placement: placement.nullable().optional(),
-});
+const publicView = z
+  .strictObject({
+    viewer: color.nullable(),
+    board: z.array(pieceView.nullable()).length(64),
+    turn: color,
+    castling: z.strictObject({
+      wK: z.boolean(),
+      wQ: z.boolean(),
+      bK: z.boolean(),
+      bQ: z.boolean(),
+    }),
+    enPassant: square.nullable(),
+    fullmoveNumber: z.number().int().min(1),
+    lives: z.strictObject({ w: count, b: count }),
+    revealed: z.array(numberView),
+    craters: z.array(square),
+    mineCount: count,
+    settings,
+    turnsUntilReshuffle: count,
+    status: z.discriminatedUnion("kind", [
+      z.strictObject({ kind: z.literal("ongoing") }),
+      z.strictObject({ kind: z.literal("over"), result, reason }),
+    ]),
+    checkException: color.nullable(),
+    inCheck: z.boolean(),
+    log: z.array(z.strictObject({ color, events: z.array(eventView) })),
+    fallen: z.strictObject({ w: fallen, b: fallen }),
+    // Manual mine mode only (3.10): both omitted in Auto games.
+    phase: phase.optional(),
+    placement: placement.nullable().optional(),
+  })
+  // Drop undefined optionals so the output matches the engine's exact optional properties.
+  .transform(({ phase: ph, placement: pl, ...rest }) => ({
+    ...rest,
+    ...(ph === undefined ? {} : { phase: ph }),
+    ...(pl === undefined ? {} : { placement: pl }),
+  }));
 
 /**
  * Strict schema for every frame the server may send. Unknown keys fail, so a field such as

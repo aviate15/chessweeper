@@ -12,6 +12,9 @@ import {
   finishPlacement,
   markReady,
   placeMine,
+  projectEvents,
+  toGameOverView,
+  toPublicView,
   toSafeError,
   unplaceMine,
   type PlacementResult,
@@ -37,7 +40,6 @@ import { clientIp, type ProxyMode } from "./ip";
 import type { StaticSite } from "./static";
 import { DEFAULT_LIMITS, TokenBucket, type Limits } from "./limits";
 import { createLogger, type Logger } from "./log";
-import { overFor, projectFor, viewFor } from "./manual";
 
 export interface ServerOptions {
   /** 0 picks an ephemeral port (tests). */
@@ -243,8 +245,8 @@ export function createServer(options: ServerOptions): RunningServer {
       toSeat(room, color, {
         type: "update",
         seq: room.seq,
-        events: projectFor(resolution.events, color),
-        view: viewFor(room.state, color),
+        events: projectEvents(resolution.events, color),
+        view: toPublicView(room.state, color),
       });
     }
     afterChange(room);
@@ -252,7 +254,7 @@ export function createServer(options: ServerOptions): RunningServer {
       for (const color of ["w", "b"] as const) {
         const seat = room.seats[color];
         if (seat !== null) clock.clearTimeout(seat.graceTimer);
-        const over = overFor(room.state, color);
+        const over = toGameOverView(room.state, color);
         if (over !== null) toSeat(room, color, { type: "game_over", over });
       }
       // Free the room shortly after the game ends, once both have had time to load the result.
@@ -307,8 +309,8 @@ export function createServer(options: ServerOptions): RunningServer {
       token: seat.token,
       settings: settingsFromConfig(room.state.config),
     });
-    send(conn, { type: "snapshot", seq: room.seq, view: viewFor(room.state, color) });
-    const over = overFor(room.state, color);
+    send(conn, { type: "snapshot", seq: room.seq, view: toPublicView(room.state, color) });
+    const over = toGameOverView(room.state, color);
     if (over !== null) send(conn, { type: "game_over", over });
     sendPlacementTimer(room, color);
 
@@ -426,7 +428,7 @@ export function createServer(options: ServerOptions): RunningServer {
       return;
     }
     if (isPlacing(room)) {
-      sendError(conn, "not-placing");
+      sendError(conn, "not-playing");
       return;
     }
     if (room.state.position.turn !== seat) {
@@ -489,7 +491,7 @@ export function createServer(options: ServerOptions): RunningServer {
     }
     room.state = result.state;
     if (msg.type !== "placement_done") {
-      send(conn, { type: "snapshot", seq: room.seq, view: viewFor(room.state, seat) });
+      send(conn, { type: "snapshot", seq: room.seq, view: toPublicView(room.state, seat) });
       return;
     }
     room.seq += 1;

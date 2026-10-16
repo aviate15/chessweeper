@@ -69,7 +69,7 @@ async function run(wPlan: Plan, bPlan: Plan): Promise<Outcome> {
   const gb = await b.next("game_over");
   expect(gw.over.owned).toEqual(gb.over.owned);
   const owned = gw.over.owned;
-  if (owned === null || owned === undefined) throw new Error("manual game over carries owned");
+  if (owned === undefined) throw new Error("manual game over carries owned");
   return { w, b, truth: { w: [...owned.w], b: [...owned.b] } };
 }
 

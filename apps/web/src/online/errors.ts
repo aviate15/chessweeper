@@ -13,6 +13,10 @@ export const FRIENDLY_ERRORS: Readonly<Record<ErrorCode, string>> = {
   internal: "The server had a problem. Please try again.",
   forbidden: "That isn't allowed right now.",
   "not-playing": "Mines are still being placed. Moves start when placement ends.",
+  "not-placing": "Mines can't be placed right now.",
+  "quota-full": "You have already placed all your mines.",
+  "bad-square": "A mine can't go on that square.",
+  "already-ready": "You are already marked as ready.",
 };
 
 const GENERIC = "Something went wrong. Please try again.";
