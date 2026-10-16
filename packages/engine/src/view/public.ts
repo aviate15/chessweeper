@@ -5,15 +5,27 @@ import { opponent } from "../chess/types";
 import { isPublicEvent, type GameEvent, type PublicEvent } from "../mines/events";
 import { liveMineCount, revealedNumbers } from "../mines/numbers";
 import { settingsFromConfig } from "../mines/settings";
-import type { GameState, GameStatus } from "../mines/state";
-import type { EventView, FallenView, LogEntryView, MoveView, PieceView, PublicView } from "./types";
+import type { GameState, GameStatus, Phase } from "../mines/state";
+import { ownDraft } from "./draft";
+import type {
+  EventView,
+  FallenView,
+  LogEntryView,
+  MoveView,
+  PieceView,
+  PlacementView,
+  PublicView,
+} from "./types";
 
 /*
  * The hidden-information boundary (design doc 3.2). Whitelist rules, enforced by lint:
  * every object below is built fresh, field by field. Nothing is spread, copied wholesale or
  * returned by reference, and `state.hidden` is never read here: the only things that
- * come from hidden state are the live numbers and the mine count, via named helpers.
+ * come from hidden state are the live numbers and the mine count, via named helpers,
+ * plus the viewer's own placement draft (3.10).
  */
+
+type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 const pieceView = (piece: Piece): PieceView => ({ color: piece.color, type: piece.type });
 
@@ -67,7 +79,6 @@ function eventView(event: PublicEvent): EventView {
       return { type: "TurnPassed", to: event.to };
     case "Reshuffled":
       return { type: "Reshuffled", mineCount: event.mineCount };
-    // M-B: Manual mine mode (3.10) events, simple pass-through for now.
     case "PlacementStarted":
       return { type: "PlacementStarted", round: event.round, quota: event.quota };
     case "PlayerReady":
@@ -92,9 +103,49 @@ function eventView(event: PublicEvent): EventView {
  * The events a client may receive: public ones only (3.1: MineRelocated is server-only),
  * each rebuilt through the whitelist. A dropped relocation still shows up as the public
  * `NumbersChanged` the engine emits, which is by design (3.1).
+ *
+ * `MinesAutoPlaced` (3.10) is seat-private: it is projected only when `viewer` is the
+ * colour it names. Without a viewer (or for the opponent) it is dropped.
  */
-export function projectEvents(events: readonly GameEvent[]): EventView[] {
-  return events.filter(isPublicEvent).map(eventView);
+export function projectEvents(events: readonly GameEvent[], viewer?: Color | null): EventView[] {
+  const out: EventView[] = [];
+  for (const event of events) {
+    if (isPublicEvent(event)) {
+      out.push(eventView(event));
+    } else if (
+      event.type === "MinesAutoPlaced" &&
+      viewer !== undefined &&
+      viewer !== null &&
+      viewer === event.color
+    ) {
+      out.push({ type: "MinesAutoPlaced", color: event.color, count: event.count });
+    }
+  }
+  return out;
+}
+
+const phaseView = (phase: Phase): Phase =>
+  phase.kind === "play"
+    ? { kind: "play" }
+    : {
+        kind: "placement",
+        round: phase.round,
+        quota: phase.quota,
+        ready: { w: phase.ready.w, b: phase.ready.b },
+      };
+
+/**
+ * Manual placement state for one viewer (3.10). The only read of drafts in this file:
+ * the viewer's own draft, for the matching seat only. Never the opponent's, never for null.
+ */
+function placementView(state: GameState, viewer: Color | null): PlacementView | null {
+  const phase = state.public.phase;
+  if (phase.kind !== "placement") return null;
+  return {
+    quota: phase.quota,
+    ready: { w: phase.ready.w, b: phase.ready.b },
+    own: viewer === null ? null : ownDraft(state, viewer),
+  };
 }
 
 function fallenPieces(log: readonly LogEntryView[]): PublicView["fallen"] {
@@ -120,7 +171,7 @@ export function toPublicView(state: GameState, viewer: Color | null): PublicView
     color: entry.color,
     events: entry.events.map(eventView),
   }));
-  return {
+  const view: Mutable<PublicView> = {
     viewer,
     board: state.position.board.map((piece) => (piece === null ? null : pieceView(piece))),
     turn: state.position.turn,
@@ -146,4 +197,10 @@ export function toPublicView(state: GameState, viewer: Color | null): PublicView
     log,
     fallen: fallenPieces(log),
   };
+  // Manual mode only (3.10): Auto views keep their exact shape.
+  if (state.config.mode === "manual") {
+    view.phase = phaseView(state.public.phase);
+    view.placement = placementView(state, viewer);
+  }
+  return view;
 }

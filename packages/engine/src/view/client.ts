@@ -1,6 +1,7 @@
 import type { Move } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
 import type { Position, Square } from "../chess/types";
+import type { Phase } from "../mines/state";
 import type { PublicView } from "./types";
 
 /*
@@ -8,6 +9,9 @@ import type { PublicView } from "./types";
  * (design doc 3.8 step 1), so the board, turn, castling rights and en passant square are
  * all a client needs.
  */
+
+/** The phase of a view: Auto views omit it and are always in play (3.10). */
+export const phaseOf = (view: PublicView): Phase => view.phase ?? { kind: "play" };
 
 /** The chess position described by a view. */
 export function positionFromView(view: PublicView): Position {
