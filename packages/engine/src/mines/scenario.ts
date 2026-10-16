@@ -2,7 +2,8 @@ import { parseFen } from "../chess/fen";
 import { parseSquare } from "../chess/square";
 import type { Square } from "../chess/types";
 import { DEFAULT_CONFIG, type GameConfig } from "./config";
-import type { GameState, Lives } from "./state";
+import type { Color } from "../chess/types";
+import type { GameState, GameStatus, Lives } from "./state";
 
 export interface Scenario {
   readonly fen: string;
@@ -12,6 +13,8 @@ export interface Scenario {
   readonly revealed?: readonly string[];
   readonly craters?: readonly string[];
   readonly config?: GameConfig;
+  readonly status?: GameStatus;
+  readonly checkException?: Color | null;
 }
 
 function squares(names: readonly string[]): Set<Square> {
@@ -43,6 +46,8 @@ export function gameFromScenario(scenario: Scenario): GameState {
       craters: squares(scenario.craters ?? []),
       lives: scenario.lives ?? { w: config.kingLives, b: config.kingLives },
       noCaptureCount: 0,
+      status: scenario.status ?? { kind: "ongoing" },
+      checkException: scenario.checkException ?? null,
     },
     hidden: { mines },
     config,

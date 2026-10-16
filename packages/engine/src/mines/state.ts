@@ -1,4 +1,4 @@
-import type { Position, Square } from "../chess/types";
+import type { Color, Position, Square } from "../chess/types";
 import type { GameConfig } from "./config";
 
 /**
@@ -12,6 +12,13 @@ export interface GameState {
   readonly hidden: HiddenState;
   readonly config: GameConfig;
 }
+
+export type GameResult = "w" | "b" | "draw";
+export type GameOverReason = "king-lives" | "checkmate" | "stalemate";
+
+export type GameStatus =
+  | { readonly kind: "ongoing" }
+  | { readonly kind: "over"; readonly result: GameResult; readonly reason: GameOverReason };
 
 export interface Lives {
   readonly w: number;
@@ -29,6 +36,12 @@ export interface PublicState {
   readonly lives: Lives;
   /** Turns since the last capture. Unused until the reshuffle work (3.7). */
   readonly noCaptureCount: number;
+  readonly status: GameStatus;
+  /**
+   * Set while a check-exception chain is pending (design doc 3.4): that side must move
+   * again this turn. Public, since the turn, the check and the explosion are all visible.
+   */
+  readonly checkException: Color | null;
 }
 
 export interface HiddenState {
