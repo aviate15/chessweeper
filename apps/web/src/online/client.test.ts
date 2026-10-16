@@ -11,6 +11,7 @@ import { FakeSocket, FakeTimers } from "./testkit";
 
 const CODE = "ABCDEF";
 const TOKEN = "tok_en-123";
+const SETTINGS = { reshuffleInterval: 6, densityPercent: 30 };
 
 function view(): PublicView {
   return toPublicView(createGame({ rng: createSeededRng(1) }), "w");
@@ -39,7 +40,7 @@ function setup() {
   return { client, sockets, timers, events, last, types };
 }
 
-const joined = { type: "joined", code: CODE, seat: "w", token: TOKEN } as const;
+const joined = { type: "joined", code: CODE, seat: "w", token: TOKEN, settings: SETTINGS } as const;
 
 describe("create and join", () => {
   it("create: sends create_room on open, then joined and snapshot arrive", () => {

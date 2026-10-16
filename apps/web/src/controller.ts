@@ -1,5 +1,6 @@
 import type {
   Color,
+  GameConfig,
   EventView,
   Flags,
   GameOverView,
@@ -39,5 +40,5 @@ export interface GameController {
   declineDraw: () => void;
   dismissHandoff: () => void;
   /** Local: start a new game. Online: unused (the screen leaves the game instead). */
-  newGame: () => void;
+  newGame: (config?: GameConfig) => void;
 }

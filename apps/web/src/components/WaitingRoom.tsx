@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { playCue } from "../audio";
+import type { GameOptions } from "../settings";
 import { Dialog } from "./Dialog";
+import { settingsSummary } from "./SettingsFields";
 
 /** The invite link for a code: this page with ?join=CODE. */
 export function inviteLink(code: string): string {
@@ -21,7 +23,15 @@ async function copy(text: string): Promise<boolean> {
 }
 
 /** Shown to the creator until the opponent joins. */
-export function WaitingRoom({ code, onCancel }: { code: string; onCancel: () => void }) {
+export function WaitingRoom({
+  code,
+  settings,
+  onCancel,
+}: {
+  code: string;
+  settings: GameOptions | null;
+  onCancel: () => void;
+}) {
   const [copied, setCopied] = useState<"code" | "link" | "failed" | null>(null);
   const doCopy = (what: "code" | "link") => {
     playCue("click");
@@ -35,6 +45,7 @@ export function WaitingRoom({ code, onCancel }: { code: string; onCancel: () => 
       <p className="code-box" data-testid="invite-code" aria-label={`Invite code ${code}`}>
         {code}
       </p>
+      {settings !== null && <p data-testid="waiting-settings">{settingsSummary(settings)}</p>}
       <div className="dialog-buttons">
         <button
           type="button"

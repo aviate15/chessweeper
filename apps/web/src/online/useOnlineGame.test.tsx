@@ -17,6 +17,7 @@ import { useOnlineGame } from "./useOnlineGame";
 
 const CODE = "ABCDEF";
 const TOKEN = "tok_en-123";
+const SETTINGS = { reshuffleInterval: 6, densityPercent: 30 };
 
 // One real first move, so updates carry valid projected events.
 const start = createGame({ rng: createSeededRng(7) });
@@ -59,7 +60,7 @@ function harness(resumeOnMount = false) {
     });
   };
   const seat = (s: "w" | "b") => {
-    receive({ type: "joined", code: CODE, seat: s, token: TOKEN });
+    receive({ type: "joined", code: CODE, seat: s, token: TOKEN, settings: SETTINGS });
     receive({ type: "snapshot", seq: 0, view: startView(s) });
   };
   return { hook, sockets, socket, receive, open, seat, timers };
@@ -219,7 +220,7 @@ describe("private flags", () => {
       ...viewAfter("w"),
       log: [{ color: "b", events: [reshuffle] }],
     };
-    h.receive({ type: "joined", code: CODE, seat: "w", token: TOKEN });
+    h.receive({ type: "joined", code: CODE, seat: "w", token: TOKEN, settings: SETTINGS });
     h.receive({ type: "snapshot", seq: 3, view: missed });
     expect([...h.hook.result.current.flags]).toEqual([]);
   });

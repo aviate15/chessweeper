@@ -5,7 +5,7 @@ import {
   type ErrorCode,
   type ServerMessage,
 } from "@chessweeper/protocol";
-import type { Square } from "@chessweeper/engine";
+import type { GameSettings, Square } from "@chessweeper/engine";
 import type { FatalReason } from "./errors";
 
 /** The slice of the browser WebSocket the client uses, so tests can supply a fake. */
@@ -108,8 +108,10 @@ export class OnlineClient {
 
   // ---- entry points ----
 
-  create(): void {
-    this.start({ type: "create_room" });
+  create(settings?: GameSettings): void {
+    this.start(
+      settings === undefined ? { type: "create_room" } : { type: "create_room", settings },
+    );
   }
 
   /** Joins a room. With a stored token this is a resume of an existing seat. */

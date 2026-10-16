@@ -1,4 +1,9 @@
-import { DEFAULT_CONFIG, DEFAULT_RESHUFFLE_INTERVAL, type GameConfig } from "@chessweeper/engine";
+import {
+  DEFAULT_SETTINGS,
+  clampSettings,
+  configFromSettings,
+  type GameSettings,
+} from "@chessweeper/engine";
 
 const FLIP_KEY = "chessweeper.flip";
 
@@ -21,46 +26,21 @@ export function saveFlip(flip: boolean): void {
 
 const OPTIONS_KEY = "chessweeper.options";
 
-/** The two tunable rules values exposed in Game > Options (3.7 config). */
-export interface GameOptions {
-  /** Turns without a capture before a reshuffle. */
-  readonly reshuffleInterval: number;
-  /** Mine density in whole percent of free squares. */
-  readonly densityPercent: number;
-}
+/** The two rules values chosen per game (3.7): the engine's `GameSettings`. */
+export type GameOptions = GameSettings;
 
-export const INTERVAL_MIN = 2;
-export const INTERVAL_MAX = 20;
-export const DENSITY_MIN = 5;
-export const DENSITY_MAX = 50;
-export const DENSITY_STEP = 5;
+export {
+  DENSITY_MAX,
+  DENSITY_MIN,
+  DENSITY_STEP,
+  INTERVAL_MAX,
+  INTERVAL_MIN,
+} from "@chessweeper/engine";
 
-export const DEFAULT_OPTIONS: GameOptions = {
-  reshuffleInterval: DEFAULT_RESHUFFLE_INTERVAL,
-  densityPercent: Math.round(DEFAULT_CONFIG.mineDensity * 100),
-};
-
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+export const DEFAULT_OPTIONS: GameOptions = DEFAULT_SETTINGS;
 
 /** Clamp to the allowed ranges; non-numbers fall back to the default. */
-export function clampOptions(raw: {
-  reshuffleInterval?: unknown;
-  densityPercent?: unknown;
-}): GameOptions {
-  const interval =
-    typeof raw.reshuffleInterval === "number" && Number.isFinite(raw.reshuffleInterval)
-      ? clamp(Math.round(raw.reshuffleInterval), INTERVAL_MIN, INTERVAL_MAX)
-      : DEFAULT_OPTIONS.reshuffleInterval;
-  const density =
-    typeof raw.densityPercent === "number" && Number.isFinite(raw.densityPercent)
-      ? clamp(
-          Math.round(raw.densityPercent / DENSITY_STEP) * DENSITY_STEP,
-          DENSITY_MIN,
-          DENSITY_MAX,
-        )
-      : DEFAULT_OPTIONS.densityPercent;
-  return { reshuffleInterval: interval, densityPercent: density };
-}
+export const clampOptions = clampSettings;
 
 export function loadOptions(): GameOptions {
   try {
@@ -82,14 +62,8 @@ export function saveOptions(options: GameOptions): void {
   }
 }
 
-/** Engine config for the saved options (mine cap and king lives stay at their defaults). */
-export function configFromOptions(options: GameOptions): GameConfig {
-  return {
-    ...DEFAULT_CONFIG,
-    reshuffleInterval: options.reshuffleInterval,
-    mineDensity: options.densityPercent / 100,
-  };
-}
+/** Engine config for the options (mine cap and king lives stay at their defaults). */
+export const configFromOptions = configFromSettings;
 
 const RULES_HIDDEN_KEY = "chessweeper.rulesHidden";
 

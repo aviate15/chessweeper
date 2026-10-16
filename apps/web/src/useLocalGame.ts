@@ -63,7 +63,8 @@ export interface LocalGame {
   offerDraw: () => void;
   acceptDraw: () => void;
   declineDraw: () => void;
-  newGame: () => void;
+  /** Starts a fresh game, optionally with a new config (the settings chosen in New game). */
+  newGame: (config?: GameConfig) => void;
 }
 
 export interface UseLocalGameOptions {
@@ -170,7 +171,8 @@ export function useLocalGame(options: UseLocalGameOptions = {}): LocalGame {
     declineDraw: () => {
       setSnap((prev) => ({ ...prev, offers: declineDraw(prev.offers) }));
     },
-    newGame: () => {
+    newGame: (next) => {
+      if (next) configRef.current = next;
       const config = configRef.current;
       stateRef.current = createGame(config ? { rng, config } : { rng });
       setSnap((prev) => snapshotOf(stateRef.current, null, prev.turnId));

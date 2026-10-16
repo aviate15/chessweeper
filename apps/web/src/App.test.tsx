@@ -1,4 +1,4 @@
-import { createSeededRng } from "@chessweeper/engine";
+import { createGame, createSeededRng } from "@chessweeper/engine";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +9,9 @@ const sq = (container: HTMLElement, name: string): HTMLElement => {
   if (!el) throw new Error(`no square ${name}`);
   return el;
 };
+
+/** Mines the engine places for a seed with the default settings (30%, at most 2 per 3x3). */
+const startMines = (seed: number) => createGame({ rng: createSeededRng(seed) }).hidden.mines.size;
 
 const openGameMenu = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(screen.getByRole("button", { name: "Game" }));
@@ -41,8 +44,8 @@ describe("App", () => {
     expect(sq(container, "e1").querySelector("[data-piece]")?.getAttribute("data-piece")).toBe(
       "wk",
     );
-    expect(screen.getByTestId("mine-count")).toHaveTextContent("8");
-    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("8");
+    expect(screen.getByTestId("mine-count")).toHaveTextContent(String(startMines(11)));
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("6");
     expect(screen.getByTestId("lives-w")).toHaveTextContent("3");
     expect(screen.getByTestId("lives-b")).toHaveTextContent("3");
     // No mine marker and no number before anything is revealed.
@@ -81,8 +84,10 @@ describe("App", () => {
     await user.click(screen.getByRole("menuitem", { name: "Resign" }));
     expect(screen.getByTestId("gameover-result")).toHaveTextContent("Black wins");
     expect(screen.getByTestId("gameover-reason")).toHaveTextContent("resignation");
-    expect(screen.getByTestId("gameover-mines")).toHaveTextContent("Mines (8)");
-    expect(container.querySelectorAll("[data-mine]")).toHaveLength(8);
+    expect(screen.getByTestId("gameover-mines")).toHaveTextContent(
+      `Mines (${String(startMines(11))})`,
+    );
+    expect(container.querySelectorAll("[data-mine]")).toHaveLength(startMines(11));
   });
 
   it("keeps the orientation until the handoff is dismissed, then follows the side to move", async () => {
@@ -204,29 +209,53 @@ describe("App", () => {
   });
 });
 
-describe("Game > Options", () => {
-  it("applies the saved interval and density at the next New game, not mid-game", async () => {
+describe("Game > New game...", () => {
+  // 3.7: the settings are chosen per game, in the New game dialog.
+  it("applies the chosen interval and density to the new game, not the running one", async () => {
     const user = userEvent.setup();
     const { container } = render(<App rng={createSeededRng(5)} />);
-    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("8");
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("6");
     await playFirstMove(user, container);
     await user.click(screen.getByRole("button", { name: "Ready" }));
     await openGameMenu(user);
-    await user.click(screen.getByRole("menuitem", { name: "Options..." }));
-    const dialog = screen.getByRole("dialog", { name: "Options" });
-    await user.selectOptions(screen.getByLabelText("Reshuffle every"), "5");
+    await user.click(screen.getByRole("menuitem", { name: "New game..." }));
+    expect(screen.getByRole("dialog", { name: "New game" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Reshuffle every"), "9");
     await user.selectOptions(screen.getByLabelText("Mine density"), "50");
-    expect(screen.getByTestId("options-mines")).toHaveTextContent("Starting mines: 16");
-    expect(dialog).toHaveTextContent("Applies at the next New game.");
+    expect(screen.getByTestId("settings-mines")).toHaveTextContent("Starting mines: about 16");
+    // The running game is untouched until OK.
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("5"); // 6 minus one move
     await user.click(screen.getByRole("button", { name: "OK" }));
-    // The running game is untouched.
-    expect(screen.getByTestId("mine-count")).toHaveTextContent("8");
-    expect(screen.getByTestId("reshuffle-count")).not.toHaveTextContent("5");
-    await openGameMenu(user);
-    await user.click(screen.getByRole("menuitem", { name: "New game" }));
-    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("5");
-    expect(screen.getByTestId("mine-count")).toHaveTextContent("16");
+    expect(screen.queryByRole("dialog", { name: "New game" })).toBeNull();
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("9");
     expect(localStorage.getItem("chessweeper.options")).toContain("50");
+  });
+
+  it("cancel leaves the running game alone", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App rng={createSeededRng(5)} />);
+    await playFirstMove(user, container);
+    await user.click(screen.getByRole("button", { name: "Ready" }));
+    await openGameMenu(user);
+    await user.click(screen.getByRole("menuitem", { name: "New game..." }));
+    await user.selectOptions(screen.getByLabelText("Reshuffle every"), "9");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("5");
+    expect(localStorage.getItem("chessweeper.options")).toBeNull();
+  });
+
+  it("the smiley restarts at once with the last settings", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(
+      "chessweeper.options",
+      JSON.stringify({ reshuffleInterval: 3, densityPercent: 10 }),
+    );
+    const { container } = render(<App rng={createSeededRng(5)} />);
+    await playFirstMove(user, container);
+    await user.click(screen.getByRole("button", { name: "Ready" }));
+    await user.click(screen.getByRole("button", { name: /restart/i }));
+    expect(screen.queryByRole("dialog", { name: "New game" })).toBeNull();
+    expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("3");
   });
 
   it("resets to defaults", async () => {
@@ -238,9 +267,10 @@ describe("Game > Options", () => {
     render(<App rng={createSeededRng(5)} />);
     expect(screen.getByTestId("reshuffle-count")).toHaveTextContent("3");
     await openGameMenu(user);
-    await user.click(screen.getByRole("menuitem", { name: "Options..." }));
+    await user.click(screen.getByRole("menuitem", { name: "New game..." }));
+    expect(screen.getByTestId("settings-mines")).toHaveTextContent("Starting mines: about 3");
     await user.click(screen.getByRole("button", { name: "Reset to defaults" }));
-    expect(screen.getByTestId("options-mines")).toHaveTextContent("Starting mines: 8");
+    expect(screen.getByTestId("settings-mines")).toHaveTextContent("Starting mines: about 10");
   });
 });
 
@@ -250,8 +280,8 @@ describe("Rules dialog", () => {
     localStorage.removeItem("chessweeper.rulesHidden");
     const first = render(<App rng={createSeededRng(2)} />);
     const dialog = screen.getByRole("dialog", { name: "Rules" });
-    expect(dialog).toHaveTextContent("After 8 turns in a row without a capture");
-    expect(dialog).toHaveTextContent("25% of the empty squares");
+    expect(dialog).toHaveTextContent("After 6 turns in a row without a capture");
+    expect(dialog).toHaveTextContent("30% of the empty squares");
     expect(dialog.querySelectorAll(".mini-board").length).toBeGreaterThanOrEqual(3);
     // Plain close does not persist: it shows again on the next load.
     await user.click(screen.getByRole("button", { name: "OK" }));

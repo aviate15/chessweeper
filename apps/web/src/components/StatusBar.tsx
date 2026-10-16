@@ -24,6 +24,10 @@ export function StatusBar({
       <span data-testid="status-turn">{turn}</span>
       <span className="status-sep"> | </span>
       <span data-testid="status-narration">{hint ?? narration}</span>
+      <span data-testid="status-settings" className="status-settings">
+        <span className="status-sep"> | </span>
+        Reshuffle {view.settings.reshuffleInterval} · Mines {view.settings.densityPercent}%
+      </span>
       {you != null && (
         <span data-testid="status-you">
           <span className="status-sep"> | </span>You: {COLOR_NAME[you]}

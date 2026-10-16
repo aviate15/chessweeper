@@ -16,9 +16,8 @@ export interface MenuBarProps {
   onToggleFlip: () => void;
   onToggleSound: () => void;
   onMoves: () => void;
-  onOptions: () => void;
   onRules: () => void;
-  /** Online play: New game becomes Leave game, and Flip board and Options are disabled. */
+  /** Online play: New game becomes Leave game, and Flip board is disabled. */
   online?: boolean;
   /** False when this build has no server URL, so Online... is greyed out. */
   onlineAvailable?: boolean;
@@ -117,7 +116,7 @@ export function MenuBar(props: MenuBarProps) {
               <Item onSelect={pick(props.onLeave ?? props.onNewGame)}>Leave game</Item>
             ) : (
               <>
-                <Item onSelect={pick(props.onNewGame)}>New game</Item>
+                <Item onSelect={pick(props.onNewGame)}>New game...</Item>
                 <Item
                   disabled={props.onlineAvailable === false || !props.onOnline}
                   onSelect={pick(props.onOnline ?? props.onNewGame)}
@@ -155,10 +154,6 @@ export function MenuBar(props: MenuBarProps) {
             </Item>
             <Item icon={ICON_MOVES} onSelect={pick(props.onMoves)}>
               Moves
-            </Item>
-            <div className="menu-sep" role="separator" />
-            <Item disabled={props.online === true} onSelect={pick(props.onOptions)}>
-              Options...
             </Item>
           </div>
         )}
