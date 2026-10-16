@@ -43,5 +43,32 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Hidden-information fence (design doc 3.2): client-facing view code builds fresh objects
+    // field by field. It never reads `.hidden`, spreads objects or copies wholesale.
+    files: [
+      "packages/engine/src/view/public.ts",
+      "packages/engine/src/view/client.ts",
+      "packages/engine/src/view/flags.ts",
+      "packages/engine/src/view/errors.ts",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "MemberExpression[property.name='hidden']",
+          message: "Client views must not read hidden state. Use a named public helper.",
+        },
+        {
+          selector: "ObjectExpression > SpreadElement",
+          message: "Build view objects field by field. Never spread engine objects.",
+        },
+        {
+          selector: "CallExpression[callee.object.name='Object'][callee.property.name='assign']",
+          message: "Build view objects field by field. Never copy engine objects.",
+        },
+      ],
+    },
+  },
   prettier,
 );

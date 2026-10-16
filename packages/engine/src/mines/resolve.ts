@@ -3,7 +3,7 @@ import { castleRookSquares, type Move } from "../chess/move";
 import { legalMoves } from "../chess/movegen";
 import type { Piece } from "../chess/types";
 import type { Rng } from "./rng";
-import type { GameEvent } from "./events";
+import { isPublicEvent, type GameEvent } from "./events";
 import { nextNoCaptureCount } from "./counter";
 import { finishTurn } from "./endturn";
 import { resolveLanding, type Working } from "./landing";
@@ -118,6 +118,7 @@ export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution 
         status: end.status,
         checkException: end.checkException,
         noCaptureCount,
+        log: [...state.public.log, { color: mover, events: work.events.filter(isPublicEvent) }],
       },
       hidden: {
         mines: work.mines,

@@ -1,5 +1,6 @@
 import type { Color, Position, Square } from "../chess/types";
 import type { GameConfig } from "./config";
+import type { PublicEvent } from "./events";
 
 /**
  * Game state, split so the type system keeps secrets apart from public data.
@@ -25,6 +26,12 @@ export interface Lives {
   readonly b: number;
 }
 
+/** Public events of one `resolveMove` call, kept for the status bar and the Moves dialog. */
+export interface LogEntry {
+  readonly color: Color;
+  readonly events: readonly PublicEvent[];
+}
+
 export interface PublicState {
   /**
    * Squares whose number is shown (design doc 3.2). Numbers themselves are derived from
@@ -42,6 +49,11 @@ export interface PublicState {
    * again this turn. Public, since the turn, the check and the explosion are all visible.
    */
   readonly checkException: Color | null;
+  /**
+   * Append-only move log, one entry per move (a check-exception chain has several).
+   * Only public events are stored: server-only events are filtered out when written.
+   */
+  readonly log: readonly LogEntry[];
 }
 
 export interface HiddenState {

@@ -38,6 +38,7 @@ export function createGame({ rng, config = DEFAULT_CONFIG }: CreateGameOptions):
       noCaptureCount: 0,
       status: { kind: "ongoing" },
       checkException: null,
+      log: [],
     },
     hidden: { mines: new Set(mines), safeStart: { w: true, b: true }, chainCaptured: false },
     config,
