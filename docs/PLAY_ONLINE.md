@@ -58,7 +58,7 @@ pnpm play            # ngrok is picked automatically; or: pnpm play --tunnel ngr
 
 The launcher checks the setup with `ngrok config check` (exit code only; the token is never read or printed), starts ngrok, reads the public URL from ngrok's local API at `127.0.0.1:4040`, and gives that exact URL to the server as its allowed origin.
 
-Free plan limits: **1 GB of transfer and 20,000 HTTP requests per month**, plus an interstitial **warning page** the first time someone opens the link in a browser: they click **Visit Site** once. The launcher's own health checks send the `ngrok-skip-browser-warning` header. The warning page applies to browser page loads; the WebSocket is expected to work after the click, but this has not been checked live yet (note it if it fails for a friend).
+Free plan limits: **1 GB of transfer and 20,000 HTTP requests per month**, plus an interstitial **warning page** the first time someone opens the link in a browser: they click **Visit Site** once. The warning page applies to browser page loads only. A WebSocket upgrade from a browser-like client went through with and without the skip header (HTTP 101), so it does not break online play, and the launcher's smoke check (create, join, resign over the public URL) passes.
 
 For a link that never changes, reserve your free dev domain in the ngrok dashboard and run `NGROK_DOMAIN=<name>.ngrok-free.dev pnpm play --tunnel ngrok`.
 
