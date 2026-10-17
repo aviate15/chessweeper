@@ -171,39 +171,65 @@ export function InfoBar(props: InfoBarProps) {
         >
           ?
         </button>
-        {pendingDraw !== null && !props.gameOver && props.canAnswerDraw === false && (
-          <div className="draw-offer" role="status">
-            <span>Draw offered. Waiting for an answer...</span>
-          </div>
-        )}
-        {pendingDraw !== null && !props.gameOver && props.canAnswerDraw !== false && (
-          <div className="draw-offer" role="alert">
-            <span>
-              {COLOR_NAME[pendingDraw]} offers a draw. {COLOR_NAME[opponent(pendingDraw)]}:
-            </span>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                playCue("click");
-                props.onAcceptDraw();
-              }}
-            >
-              Accept draw
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                playCue("click");
-                props.onDeclineDraw();
-              }}
-            >
-              Decline draw
-            </button>
-          </div>
-        )}
+        <DrawOfferBar
+          pendingDraw={pendingDraw}
+          gameOver={props.gameOver}
+          canAnswerDraw={props.canAnswerDraw}
+          onAcceptDraw={props.onAcceptDraw}
+          onDeclineDraw={props.onDeclineDraw}
+        />
       </div>
+    </div>
+  );
+}
+
+/** The pending draw offer: a waiting note for the offerer, Accept and Decline for the other side. */
+export function DrawOfferBar({
+  pendingDraw,
+  gameOver,
+  canAnswerDraw,
+  onAcceptDraw,
+  onDeclineDraw,
+}: {
+  pendingDraw: Color | null;
+  gameOver: boolean;
+  canAnswerDraw?: boolean | undefined;
+  onAcceptDraw: () => void;
+  onDeclineDraw: () => void;
+}) {
+  if (pendingDraw === null || gameOver) return null;
+  if (canAnswerDraw === false) {
+    return (
+      <div className="draw-offer" role="status">
+        <span>Draw offered. Waiting for an answer...</span>
+      </div>
+    );
+  }
+  return (
+    <div className="draw-offer" role="alert">
+      <span>
+        {COLOR_NAME[pendingDraw]} offers a draw. {COLOR_NAME[opponent(pendingDraw)]}:
+      </span>
+      <button
+        type="button"
+        className="btn"
+        onClick={() => {
+          playCue("click");
+          onAcceptDraw();
+        }}
+      >
+        Accept draw
+      </button>
+      <button
+        type="button"
+        className="btn"
+        onClick={() => {
+          playCue("click");
+          onDeclineDraw();
+        }}
+      >
+        Decline draw
+      </button>
     </div>
   );
 }

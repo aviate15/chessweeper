@@ -7,11 +7,12 @@ import {
   type Flags,
   type GameOverView,
   type GameSettings,
-  type Move,
   type PublicView,
+  phaseOf,
+  type Move,
   type Square,
 } from "@chessweeper/engine";
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { OnlineClient, type ClientEvent, type ConnectionState } from "./client";
 import { serverUrl } from "./config";
 import { FATAL_MESSAGES, friendlyError, type FatalReason } from "./errors";
@@ -62,6 +63,17 @@ interface State {
   /** Why the last create or join failed, shown in the lobby. */
   readonly lobbyError: string | null;
   readonly noticeCounter: number;
+  /**
+   * Manual mine mode (3.10): when the placement round ends, from the server's `placement`
+   * message (`msLeft` at receipt), sent at round start, on join and on reconnect.
+   */
+  readonly placementEndsAt: number | null;
+  /** My placements as I made them, until the server's next view replaces them. */
+  readonly ownOverride: readonly Square[] | null;
+  /** I pressed Done and the server has not confirmed it in a view yet. */
+  readonly doneSent: boolean;
+  /** Mines the server placed at random for me when the last round ended (viewer-only event). */
+  readonly autoPlaced: number | null;
 }
 
 const initial: State = {
@@ -84,6 +96,10 @@ const initial: State = {
   fatal: null,
   lobbyError: null,
   noticeCounter: 0,
+  placementEndsAt: null,
+  ownOverride: null,
+  doneSent: false,
+  autoPlaced: null,
 };
 
 type Action =
@@ -99,6 +115,8 @@ type Action =
   | { readonly t: "client"; readonly event: ClientEvent }
   | { readonly t: "flag"; readonly square: Square }
   | { readonly t: "pending" }
+  | { readonly t: "own"; readonly own: readonly Square[] | null }
+  | { readonly t: "done" }
   | { readonly t: "draw"; readonly draw: DrawState; readonly mustMove?: boolean }
   | { readonly t: "dismissError" }
   | { readonly t: "clearLobbyError" };
@@ -116,32 +134,55 @@ function onClientEvent(state: State, event: ClientEvent): State {
       return { ...state, connection: event.state };
     case "joined":
       return state; // handled through the `joined` action, which carries stored flags
-    case "snapshot":
+    case "snapshot": {
+      const view = event.view;
       return {
         ...state,
-        view: event.view,
+        view,
         lastEvents: [],
         pending: false,
-        flags: flagsAfterSnapshot(state.flags, state.flagsLogLength, event.view),
-        flagsLogLength: event.view.log.length,
+        flags: flagsAfterSnapshot(state.flags, state.flagsLogLength, view),
+        flagsLogLength: view.log.length,
+        ownOverride: null,
+        doneSent: false,
+        placementEndsAt: phaseOf(view).kind === "placement" ? state.placementEndsAt : null,
       };
+    }
     case "update": {
-      const mine = event.events.some((e) => e.type === "MoveMade" && e.color === state.seat);
+      const view = event.view;
+      // MinesAutoPlaced reaches only the seat it names: my own random-fill count (3.10).
+      const events = event.events.filter((e) => e.type !== "MinesAutoPlaced");
+      const filled = event.events.find(
+        (e) => e.type === "MinesAutoPlaced" && e.color === state.seat,
+      );
+      const autoPlaced = filled?.type === "MinesAutoPlaced" ? filled.count : null;
+      const moved = events.some((e) => e.type === "MoveMade");
+      const mine = events.some((e) => e.type === "MoveMade" && e.color === state.seat);
+      const newRound = events.some((e) => e.type === "PlacementStarted");
       return {
         ...state,
-        view: event.view,
-        lastEvents: event.events,
+        view,
+        lastEvents: events,
         turnId: state.turnId + 1,
         pending: false,
         // 3.6: any move lapses a pending offer; the offerer may offer again after moving.
-        draw: "none",
+        // Placement updates (a player got ready) are not moves.
+        draw: moved ? "none" : state.draw,
         mustMove: mine ? false : state.mustMove,
-        flags: flagsAfterEvents(state.flags, event.events),
-        flagsLogLength: event.view.log.length,
+        flags: flagsAfterEvents(state.flags, events),
+        flagsLogLength: view.log.length,
+        ownOverride: null,
+        doneSent: false,
+        placementEndsAt: phaseOf(view).kind === "placement" ? state.placementEndsAt : null,
+        // The random-fill notice stays until I move or the next round starts.
+        autoPlaced: autoPlaced ?? (mine || newRound ? null : state.autoPlaced),
       };
     }
-    case "game_over":
+    case "placement":
+      return { ...state, placementEndsAt: Date.now() + event.msLeft };
+    case "game_over": {
       return { ...state, view: event.over.view, gameOver: event.over, pending: false };
+    }
     case "opponent":
       return { ...state, opponent: event.state };
     case "draw":
@@ -149,7 +190,13 @@ function onClientEvent(state: State, event: ClientEvent): State {
     case "error": {
       const text = friendlyError(event.code);
       if (state.seat === null) return { ...state, lobbyError: text, active: false };
-      return { ...state, pending: false, ...notice(state, text) };
+      return {
+        ...state,
+        pending: false,
+        ownOverride: null,
+        doneSent: false,
+        ...notice(state, text),
+      };
     }
     case "fatal":
       if (state.seat === null) {
@@ -180,6 +227,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, flags: toggleFlag(state.flags, action.square) };
     case "pending":
       return { ...state, pending: true };
+    case "own":
+      return { ...state, ownOverride: action.own };
+    case "done":
+      return { ...state, doneSent: true };
     case "draw":
       return {
         ...state,
@@ -200,6 +251,7 @@ export interface OnlineGame {
   readonly seat: Color | null;
   readonly code: string | null;
   readonly settings: GameSettings | null;
+  /** The server's view with my own pending placement edits applied (3.10). */
   readonly view: PublicView | null;
   readonly gameOver: GameOverView | null;
   readonly flags: Flags;
@@ -212,6 +264,10 @@ export interface OnlineGame {
   readonly canOfferDraw: boolean;
   /** True while it is my turn and no move is awaiting an answer. */
   readonly canMove: boolean;
+  /** Manual mine mode: milliseconds left in the placement round, null without a timer. */
+  readonly placementMsLeft: number | null;
+  /** Mines the server placed at random for me, until my next move (null if none). */
+  readonly autoPlaced: number | null;
   readonly error: OnlineNotice | null;
   readonly fatal: FatalReason | null;
   readonly lobbyError: string | null;
@@ -226,6 +282,9 @@ export interface OnlineGame {
   acceptDraw: () => void;
   declineDraw: () => void;
   claimWin: () => void;
+  /** Manual mine mode: place or take back one of my mines. */
+  togglePlacement: (square: Square) => void;
+  donePlacement: () => void;
   dismissError: () => void;
   clearLobbyError: () => void;
 }
@@ -251,6 +310,9 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
   const codeRef = useRef<string | null>(null);
   /** True once the current client has been given a seat. */
   const joinedRef = useRef(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const [, setTick] = useState(0);
 
   const stop = useCallback(() => {
     unsubscribeRef.current?.();
@@ -392,6 +454,31 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
     clientRef.current?.claimWin();
   }, []);
 
+  const togglePlacement = useCallback((square: Square) => {
+    const client = clientRef.current;
+    const current = stateRef.current;
+    const placement = current.view?.placement;
+    if (
+      client === null ||
+      (current.view && phaseOf(current.view).kind) !== "placement" ||
+      !placement
+    )
+      return;
+    if (placement.ready[current.seat ?? "w"] || current.doneSent) return;
+    const own = current.ownOverride ?? placement.own ?? [];
+    if (own.includes(square)) {
+      if (client.unplace(square)) {
+        dispatch({ t: "own", own: own.filter((sq) => sq !== square) });
+      }
+    } else if (own.length < placement.quota) {
+      if (client.place(square)) dispatch({ t: "own", own: [...own, square] });
+    }
+  }, []);
+
+  const donePlacement = useCallback(() => {
+    if (clientRef.current?.placementDone() === true) dispatch({ t: "done" });
+  }, []);
+
   const dismissError = useCallback(() => {
     dispatch({ t: "dismissError" });
   }, []);
@@ -411,6 +498,38 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
           ? "waiting"
           : "playing";
   const playing = phase === "playing";
+  const placing =
+    state.view !== null && phaseOf(state.view).kind === "placement" && phase === "playing";
+
+  // My own placement edits show at once, before the server confirms them (3.10).
+  const view = useMemo((): PublicView | null => {
+    const base = state.view;
+    if (!base?.placement) return base;
+    const seat = state.seat;
+    const ready =
+      state.doneSent && seat !== null
+        ? { ...base.placement.ready, [seat]: true }
+        : base.placement.ready;
+    return {
+      ...base,
+      placement: { ...base.placement, ready, own: state.ownOverride ?? base.placement.own },
+    };
+  }, [state.view, state.seat, state.doneSent, state.ownOverride]);
+
+  // The countdown re-renders four times a second while a round is on.
+  useEffect(() => {
+    if (!placing || state.placementEndsAt === null) return;
+    const timer = window.setInterval(() => {
+      setTick((n) => n + 1);
+    }, 250);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [placing, state.placementEndsAt]);
+  const placementMsLeft =
+    placing && state.placementEndsAt !== null
+      ? Math.max(0, state.placementEndsAt - Date.now())
+      : null;
 
   return {
     active: state.active,
@@ -418,7 +537,7 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
     seat: state.seat,
     code: state.code,
     settings: state.settings,
-    view: state.view,
+    view,
     gameOver: state.gameOver,
     flags: state.flags,
     lastEvents: state.lastEvents,
@@ -427,7 +546,14 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
     opponent: state.opponent,
     draw: state.draw,
     canOfferDraw: playing && state.draw === "none" && !state.mustMove,
-    canMove: playing && state.view !== null && state.view.turn === state.seat && !state.pending,
+    canMove:
+      playing &&
+      state.view !== null &&
+      phaseOf(state.view).kind === "play" &&
+      state.view.turn === state.seat &&
+      !state.pending,
+    placementMsLeft,
+    autoPlaced: state.autoPlaced,
     error: state.error,
     fatal: state.fatal,
     lobbyError: state.lobbyError,
@@ -441,6 +567,8 @@ export function useOnlineGame(options: UseOnlineGameOptions = {}): OnlineGame {
     acceptDraw,
     declineDraw,
     claimWin,
+    togglePlacement,
+    donePlacement,
     dismissError,
     clearLobbyError,
   };

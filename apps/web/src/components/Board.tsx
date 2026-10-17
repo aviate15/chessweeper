@@ -8,7 +8,8 @@ import {
   type Square as Sq,
 } from "@chessweeper/engine";
 import { numberDescription, revealSource } from "../narration";
-import type { Fx } from "../presentation";
+import { BLAST_RING_MS, type Fx } from "../presentation";
+import type { OwnedLayout } from "./placementTypes";
 import { Square, type SquareFx } from "./Square";
 
 /** Logical size of one square: a 16px sprite at 2x. */
@@ -30,6 +31,12 @@ export interface BoardProps {
   onSquareFlag: (square: Sq) => void;
   /** A square gained focus (keyboard or pointer); used to show number hints. */
   onSquareFocus?: (square: Sq) => void;
+  /** Manual mine mode game over: who placed which mine (overrides `mines`). Big = in both. */
+  owned?: OwnedLayout | null;
+  /** Manual mine placement: the viewer's own markers, drawn in their colour. */
+  marks?: { squares: readonly Sq[]; color: Color } | null;
+  /** Squares that cannot be clicked (placement: occupied squares). */
+  isDisabled?: (square: Sq) => boolean;
 }
 
 /** Square of a colour's king, or null (never null in a real game). */
@@ -52,6 +59,23 @@ export function screenPos(square: Sq, orientation: Color): { col: number; row: n
   return orientation === "w"
     ? { col: fileOf(square), row: 7 - rankOf(square) }
     : { col: 7 - fileOf(square), row: rankOf(square) };
+}
+
+type MineKind = "w" | "b" | "big";
+
+/** Per-square mine owner for an owned layout (game over) or the viewer's placement markers. */
+function mineKinds(
+  owned: OwnedLayout | null | undefined,
+  marks: { squares: readonly Sq[]; color: Color } | null | undefined,
+): Map<Sq, MineKind> {
+  const out = new Map<Sq, MineKind>();
+  if (owned) {
+    for (const sq of owned.w) out.set(sq, "w");
+    for (const sq of owned.b) out.set(sq, out.get(sq) === "w" ? "big" : "b");
+  } else if (marks) {
+    for (const sq of marks.squares) out.set(sq, marks.color);
+  }
+  return out;
 }
 
 function buildFx(fx: readonly Fx[], orientation: Color): Map<Sq, SquareFx> {
@@ -88,6 +112,15 @@ function buildFx(fx: readonly Fx[], orientation: Color): Map<Sq, SquareFx> {
       case "check":
         at(f.square).checkFlash = true;
         break;
+      case "blast":
+        for (const sq of f.area) {
+          const d = Math.max(
+            Math.abs((sq % 8) - (f.square % 8)),
+            Math.abs(Math.floor(sq / 8) - Math.floor(f.square / 8)),
+          );
+          at(sq).explosion = { delayMs: f.delayMs + d * BLAST_RING_MS };
+        }
+        break;
       case "reshuffle":
       case "mineReveal":
       case "lifeCrack":
@@ -110,6 +143,9 @@ export function Board({
   onSquareClick,
   onSquareFlag,
   onSquareFocus,
+  owned,
+  marks,
+  isDisabled,
 }: BoardProps) {
   const last = view.log[view.log.length - 1];
   const moved = last?.events.find((e) => e.type === "MoveMade");
@@ -120,7 +156,9 @@ export function Board({
   const checkSquare = view.inCheck ? findKing(view, view.turn) : null;
   const wave = fx.some((f) => f.kind === "reshuffle");
   const reveal = fx.some((f) => f.kind === "mineReveal");
-  const mineOrder = new Map(mines.map((m, i) => [m, i]));
+  const kinds = useMemo(() => mineKinds(owned, marks), [owned, marks]);
+  const shown = owned ? [...kinds.keys()] : mines;
+  const mineOrder = new Map(shown.map((m, i) => [m, i]));
   const files = orientation === "w" ? FILES : FILES.split("").reverse().join("");
   const ranks = orientation === "w" ? "87654321" : "12345678";
   return (
@@ -158,7 +196,9 @@ export function Board({
               lastMove={lastSquares.includes(sq)}
               check={checkSquare === sq}
               flagged={flags.has(sq)}
-              mine={mineOrder.has(sq)}
+              mine={mineOrder.has(sq) || kinds.has(sq)}
+              mineKind={kinds.get(sq)}
+              disabled={isDisabled?.(sq)}
               fx={sqFx}
               fxKey={fxKey}
               description={numberDescription(

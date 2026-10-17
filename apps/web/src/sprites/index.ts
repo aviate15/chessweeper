@@ -1,5 +1,6 @@
 import { FACE_COOL, FACE_DEAD, FACE_NORMAL, FACE_OOH } from "./faces";
 import { LED_DIGITS, LED_KEYS } from "./led";
+import { MINE_BIG, MINE_BLACK, MINE_WHITE } from "./manual";
 import { LED_AMBER, LED_GREEN } from "./palette";
 import { PIECE_ORDER, PIECE_SPRITES } from "./pieces";
 import {
@@ -41,6 +42,7 @@ import {
 export * from "./palette";
 export * from "./pieces";
 export * from "./symbols";
+export * from "./manual";
 export * from "./tiles";
 export * from "./faces";
 export * from "./led";
@@ -93,6 +95,9 @@ export const SPRITE_GROUPS: readonly SpriteGroup[] = [
       { name: "Flag", sprite: FLAG },
       { name: "Mine", sprite: MINE },
       { name: "Exploded mine", sprite: MINE_EXPLODED },
+      { name: "White mine", sprite: MINE_WHITE },
+      { name: "Black mine", sprite: MINE_BLACK },
+      { name: "Big mine", sprite: MINE_BIG },
       ...EXPLOSION_FRAMES.map((sprite, i) => ({ name: `Explosion ${String(i + 1)}`, sprite })),
       { name: "Life full", sprite: LIFE_FULL },
       { name: "Life cracked", sprite: LIFE_CRACKED },

@@ -19,6 +19,7 @@ pnpm --filter @chessweeper/web dev   # play local pass-and-play in the browser
 - A rules page opens on first load. Reopen it any time from **Help → Rules** or the **?** button.
 - A revealed number counts the mines in the 8 neighbouring squares. Hover or focus a number to see what it counts and which landing revealed it. When a piece stands on a numbered square the number shows in a small corner badge.
 - **Game → New game...** sets the reshuffle interval (default 6 turns) and mine density (default 30%) for the new game. Online, the creator picks them in the Create game dialog and both players see them.
+- **Manual mine mode** (pick it in New game... or Create game; default is Auto mine, where the game places the mines): the players place the mines for each other. Before play and after every reshuffle each player secretly places up to their quota on empty squares (5 each at the default 30%). Online it runs on a 20-second timer; locally White places, the device is handed over, then Black places. A square both players mark is a big mine that counts double and blasts the 3x3 area around it. The reshuffle interval defaults to 10 in this mode. Full rules: section 3.10 of [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md).
 - Right-click (or the flag button) places private flags. Sound and board flipping are toggles in the Game menu.
 
 ## Play online with friends

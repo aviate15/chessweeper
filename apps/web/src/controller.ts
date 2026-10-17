@@ -9,6 +9,14 @@ import type {
   Square,
 } from "@chessweeper/engine";
 
+/** Manual mine mode (3.10): what the placement screen needs besides the view. */
+export interface PlacementControl {
+  /** Whose mines are being placed (online: my seat; local: White first, then Black). */
+  readonly color: Color;
+  /** Milliseconds left in the round, or null when there is no timer (local play). */
+  readonly msLeft: number | null;
+}
+
 /**
  * What the game screen needs from a game, whether it is local pass-and-play or online.
  * Both are driven only by a PublicView and projected events.
@@ -32,7 +40,15 @@ export interface GameController {
   readonly pendingDraw: Color | null;
   /** Online: false while my own offer is pending. */
   readonly canAnswerDraw: boolean;
+  /** Non-null while a placement round is under way and this client may place. */
+  readonly placement: PlacementControl | null;
+  /** Mines placed at random for the player to move (local) or for me (online); null if none. */
+  readonly autoPlaced: number | null;
+  /** Local pass-and-play: the handoff is to a player who places mines next, not to move. */
+  readonly handoffPlacing: boolean;
   play: (move: Move) => void;
+  togglePlacement: (square: Square) => void;
+  donePlacement: () => void;
   toggleFlag: (square: Square) => void;
   resign: () => void;
   offerDraw: () => void;

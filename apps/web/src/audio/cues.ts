@@ -38,6 +38,7 @@ export function cuesFor(events: readonly EventView[]): Cue[] {
         found.add("capture");
         break;
       case "MineTriggered":
+      case "BigMineBlasted":
       case "PieceDestroyed":
         found.add("explosion");
         break;

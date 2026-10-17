@@ -1,6 +1,6 @@
 import "@fontsource/silkscreen/400.css";
 import "@fontsource/silkscreen/700.css";
-import { opponent, type Rng } from "@chessweeper/engine";
+import { opponent, phaseOf, type Rng } from "@chessweeper/engine";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { LobbyDialog } from "./components/LobbyDialog";
 import { Dialog } from "./components/Dialog";
@@ -125,6 +125,14 @@ export function App({ rng, gate = true, createOnlineClient }: AppProps) {
       seat,
       canMove: online.canMove && online.connection === "open" && online.fatal === null,
       handoffTo: null,
+      handoffPlacing: false,
+      placement:
+        phaseOf(online.view).kind === "placement" && online.view.placement
+          ? { color: seat, msLeft: online.placementMsLeft }
+          : null,
+      autoPlaced: online.autoPlaced,
+      togglePlacement: online.togglePlacement,
+      donePlacement: online.donePlacement,
       canOfferDraw: online.canOfferDraw && online.connection === "open",
       pendingDraw: online.draw === "theirs" ? opponent(seat) : online.draw === "mine" ? seat : null,
       canAnswerDraw: online.draw === "theirs",
@@ -146,9 +154,14 @@ export function App({ rng, gate = true, createOnlineClient }: AppProps) {
       lastEvents: local.lastEvents,
       turnId: local.turnId,
       seat: null,
-      canMove: true,
+      canMove: local.placingColor === null,
       handoffTo: local.handoffTo,
-      canOfferDraw: canOffer(local.offers, local.view.turn),
+      handoffPlacing: local.handoffPlacing,
+      placement: local.placingColor ? { color: local.placingColor, msLeft: null } : null,
+      autoPlaced: local.autoPlaced,
+      togglePlacement: local.togglePlacement,
+      donePlacement: local.donePlacement,
+      canOfferDraw: canOffer(local.offers, local.actor),
       pendingDraw: local.offers.pending,
       canAnswerDraw: true,
       play: (move) => {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { playCue } from "../audio";
 import { isValidCode, normalizeCode } from "../online/code";
-import type { GameOptions } from "../settings";
+import { clampOptions, type GameOptions } from "../settings";
 import { Dialog } from "./Dialog";
 import { SettingsFields } from "./SettingsFields";
 
@@ -33,14 +33,14 @@ export function LobbyDialog({
         </p>
       )}
       <p>Start a new game and send the code to a friend:</p>
-      <SettingsFields settings={settings} onChange={setSettings} />
+      <SettingsFields settings={settings} onChange={setSettings} modePicker />
       <div className="dialog-buttons">
         <button
           type="button"
           className="btn"
           onClick={() => {
             playCue("click");
-            onCreate(settings);
+            onCreate(clampOptions(settings));
           }}
         >
           Create game

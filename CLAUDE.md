@@ -19,6 +19,7 @@ Game rules: @docs/GAME_DESIGN.md
 - `apps/server`: Node + `ws` WebSocket server. Server-authoritative. Mine positions never leave the server; clients only receive revealed numbers, craters, and their own flags.
 - `apps/web`: browser client. Local pass-and-play runs the engine in the browser.
 - Flags are private per player. Numbers and craters are public.
+- Two game modes: Auto mine (default; `settings.mode` is omitted) and Manual mine (3.10; players secretly place mines in placement rounds, big mines blast 3x3). Manual-mode players' drafts and placements stay server-side like mine positions; clients get only their own draft and, at game over, the layout by placer. Local play reads the placer's draft from the engine state in `apps/web/src/useLocalGame.ts`; the board is never in the DOM during a pass-and-play handoff.
 
 ## Conventions
 
