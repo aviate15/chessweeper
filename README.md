@@ -11,14 +11,59 @@ Rules live in [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md), the single source of
 
 Both settings (turns between reshuffles, mine density) are chosen per game in **Game → New game...** or, online, in the Create game dialog; both players can see them. Details: sections 3.7, 3.9 and 3.10 of the design doc.
 
-## Quickstart
+## Play
 
-Requires Node 24 (see `.nvmrc`; 22 or newer works) and pnpm.
+Needs Node 24 (see `.nvmrc`; 22 or newer works) and [pnpm](https://pnpm.io/installation). Run everything from the repo root.
+
+### On your own machine (solo or pass-and-play)
 
 ```sh
 pnpm install
-pnpm --filter @chessweeper/web dev   # local pass-and-play at http://localhost:5173
+pnpm play --local
 ```
+
+Then open <http://localhost:8080>. The first run builds the game, which takes a moment. Set `PLAY_PORT=<other port>` to use another port.
+
+- **Auto mine:** the game hides the mines for you. Just play.
+- **Manual mine:** you and your opponent place mines for each other. Locally, White places, hands the device over, then Black places.
+
+### Host an online game for friends
+
+You need a free [ngrok](https://ngrok.com) account and **your own authtoken** (dashboard.ngrok.com). Never put a token or a personal domain in the repo.
+
+One-time setup (macOS with Homebrew):
+
+```sh
+brew install ngrok
+ngrok config add-authtoken <YOUR_TOKEN>   # your own token; keep it private
+```
+
+Every time you host:
+
+```sh
+pnpm play
+```
+
+Share the printed public link (it is also copied to your clipboard). In the game choose **Game → Online... → Create game**, then send your friend the link or the code. The first time your friend opens an ngrok link they see a warning page and click **Visit Site** once.
+
+Without ngrok, `pnpm play` tries Cloudflare, then Pinggy, then localhost.run, and uses the first that works. Fallbacks you can force:
+
+- `pnpm play --tunnel pinggy`: free, no account, but the link ends after 60 minutes (restart for a new one).
+- `pnpm play --local`: no tunnel, only this machine.
+
+Notes:
+
+- ngrok's free plan allows 1 GB of transfer and 20,000 requests per month.
+- Your laptop must stay awake and online while you host. On macOS `pnpm play` already runs `caffeinate`; running `caffeinate -dims` yourself also works.
+- Ctrl+C or closing the lid ends every live game, and each run gets a new link.
+
+Troubleshooting:
+
+- **ngrok can't connect (strict wifi):** switch to a phone hotspot or another network, or try `--tunnel pinggy`.
+- **Origin or "not allowed" errors:** the server only accepts the exact public link the launcher passed it. Restart `pnpm play` and use the new link; old links never work again.
+- **"Port 8080 is busy":** run `PLAY_PORT=<other port> pnpm play`.
+
+More detail in [`docs/PLAY_ONLINE.md`](docs/PLAY_ONLINE.md). Fly.io and Vercel hosting config exists in [`docs/DEPLOY.md`](docs/DEPLOY.md); it is optional and not used for now.
 
 ## Playing
 
@@ -27,17 +72,12 @@ pnpm --filter @chessweeper/web dev   # local pass-and-play at http://localhost:5
 - Right-click (or the flag button) places private flags. Sound and board flipping are toggles in the Game menu.
 - **Game → Online...** opens the lobby: create a game and share the code or link, or join with a code.
 
-## Play online with friends
-
-`pnpm play` builds the game, serves it from your machine and shares it through a free public tunnel (ngrok if configured, else Cloudflare, Pinggy or localhost.run; `--tunnel <name>` forces one, `--local` skips the tunnel). No account is needed except for ngrok. Steps and limits are in [`docs/PLAY_ONLINE.md`](docs/PLAY_ONLINE.md).
-
-Fly.io and Vercel hosting config exists in [`docs/DEPLOY.md`](docs/DEPLOY.md). It is optional and not used for now.
-
 ## Tests and contributing
 
 ```sh
 pnpm check   # format check, lint, typecheck and all tests (run this before a PR)
 pnpm test    # Vitest only
+pnpm --filter @chessweeper/web dev   # Vite dev server, http://localhost:5173 (pass-and-play only)
 pnpm --filter @chessweeper/web e2e   # Playwright, including a two-player online game
 ```
 

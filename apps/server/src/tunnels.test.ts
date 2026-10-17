@@ -10,9 +10,9 @@ const byId = (id: string) => {
 
 describe("tunnel output parsing", () => {
   it("finds the cloudflared URL in its banner", () => {
-    const text = "|  https://metropolitan-alone-acm-dance.trycloudflare.com  |";
+    const text = "|  https://example-fake-name-here.trycloudflare.com  |";
     expect(byId("cloudflared").findUrl(text)).toBe(
-      "https://metropolitan-alone-acm-dance.trycloudflare.com",
+      "https://example-fake-name-here.trycloudflare.com",
     );
     expect(byId("cloudflared").findUrl("https://example.com")).toBeNull();
   });
@@ -22,10 +22,10 @@ describe("tunnel output parsing", () => {
       "Warning: Permanently added '[free.pinggy.io]:443' (RSA) to the list of known hosts.",
       "See https://openssh.com/pq.html",
       "Your tunnel will expire in 60 minutes. https://dashboard.pinggy.io",
-      "https://kvgzp-103-210-49-131.free.pinggy.net",
-      "https://rlwko-103-210-49-131.run.pinggy-free.link",
+      "https://aaaaa-1-2-3-4.free.pinggy.net",
+      "https://bbbbb-1-2-3-4.run.pinggy-free.link",
     ].join("\n");
-    expect(byId("pinggy").findUrl(text)).toBe("https://kvgzp-103-210-49-131.free.pinggy.net");
+    expect(byId("pinggy").findUrl(text)).toBe("https://aaaaa-1-2-3-4.free.pinggy.net");
     expect(
       byId("pinggy").findUrl("https://dashboard.pinggy.io\nhttps://pinggy.io/docs"),
     ).toBeNull();
@@ -38,10 +38,10 @@ describe("tunnel output parsing", () => {
     const text = [
       "To set up and manage custom domains go to https://admin.localhost.run/",
       "More details at https://localhost.run/docs/custom-domains",
-      "https://f97b892d60e743.lhr.life",
+      "https://abc123def456.lhr.life",
       "https://localhost.run/docs/forever-free/",
     ].join("\n");
-    expect(byId("localhost.run").findUrl(text)).toBe("https://f97b892d60e743.lhr.life");
+    expect(byId("localhost.run").findUrl(text)).toBe("https://abc123def456.lhr.life");
     expect(byId("localhost.run").findUrl("https://admin.localhost.run/")).toBeNull();
   });
 
