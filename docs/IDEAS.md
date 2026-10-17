@@ -6,6 +6,8 @@ Ideas that are NOT in the current rules. `docs/GAME_DESIGN.md` stays the single 
 
 # Idea: Manual Mine mode (second game mode)
 
+> **Moved (2026-10-17):** the spec now lives in `docs/GAME_DESIGN.md` section 3.10. The text below is the original idea, kept for history.
+
 Status: [I] parked until auto mode has shipped online. Decided in design chat, 2026-10-16. Do not implement until Aviate says go.
 
 Modes: "Auto mine" (the current game) and "Manual mine".

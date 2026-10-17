@@ -203,6 +203,7 @@ function playGame(seed: number, variant: Variant, policy: Policy, stats: Stats):
     mineCap: null,
     kingLives: 3,
     reshuffleInterval: INTERVAL,
+    mode: "auto" as const,
   };
   let state = createGame({ rng, config });
   const expected = mineCountFor(32, config);

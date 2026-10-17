@@ -47,7 +47,17 @@ export type EventView =
   | { readonly type: "CheckExceptionTriggered"; readonly color: Color }
   | { readonly type: "GameOver"; readonly result: GameResult; readonly reason: GameOverReason }
   | { readonly type: "TurnPassed"; readonly to: Color }
-  | { readonly type: "Reshuffled"; readonly mineCount: number };
+  | { readonly type: "Reshuffled"; readonly mineCount: number }
+  // M-B: Manual mine mode (3.10) events, same shape as the engine events.
+  | { readonly type: "PlacementStarted"; readonly round: number; readonly quota: number }
+  | { readonly type: "PlayerReady"; readonly color: Color }
+  | { readonly type: "PlacementEnded"; readonly mineCount: number }
+  | {
+      readonly type: "BigMineBlasted";
+      readonly square: Square;
+      readonly by: PieceView;
+      readonly area: readonly Square[];
+    };
 
 export interface LogEntryView {
   readonly color: Color;
