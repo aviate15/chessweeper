@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TUNNELS, pickTunnels, tunnelChoice, type TunnelContext } from "./tunnels";
+import { TUNNELS, ngrokUrlFromApi, pickTunnels, tunnelChoice, type TunnelContext } from "./tunnels";
 
 const ctx: TunnelContext = { port: 8080, sshDir: "/tmp/cw-ssh", ngrokDomain: null };
 const byId = (id: string) => {
@@ -45,11 +45,24 @@ describe("tunnel output parsing", () => {
     expect(byId("localhost.run").findUrl("https://admin.localhost.run/")).toBeNull();
   });
 
-  it("finds the ngrok URL in logfmt output and ignores the local API address", () => {
-    const text =
-      'msg="started tunnel" obj=tunnels name=command_line addr=http://127.0.0.1:8080 url=https://my-name.ngrok-free.dev';
-    expect(byId("ngrok").findUrl(text)).toBe("https://my-name.ngrok-free.dev");
-    expect(byId("ngrok").findUrl("web interface on http://127.0.0.1:4040")).toBeNull();
+  it("reads the ngrok URL from the local agent API, ignoring non-https and bad shapes", () => {
+    const ok = {
+      tunnels: [
+        { public_url: "http://my-name.ngrok-free.dev", proto: "http" },
+        { public_url: "https://my-name.ngrok-free.dev", proto: "https" },
+      ],
+    };
+    expect(ngrokUrlFromApi(ok)).toBe("https://my-name.ngrok-free.dev");
+    expect(ngrokUrlFromApi({ tunnels: [] })).toBeNull();
+    expect(ngrokUrlFromApi({ tunnels: [{ public_url: "https://evil.com/x y" }] })).toBeNull();
+    expect(ngrokUrlFromApi(null)).toBeNull();
+    expect(ngrokUrlFromApi("tunnels")).toBeNull();
+    expect(byId("ngrok").apiUrl).toBe("http://127.0.0.1:4040/api/tunnels");
+  });
+
+  it("ngrok is tried first and starts without any log flag", () => {
+    expect(TUNNELS[0]?.id).toBe("ngrok");
+    expect(byId("ngrok").args(ctx).join(" ")).not.toContain("--log");
   });
 });
 

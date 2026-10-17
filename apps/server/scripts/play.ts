@@ -92,6 +92,14 @@ function hasBinary(bin: string): boolean {
   return spawnSync("sh", ["-c", `command -v ${bin}`], { stdio: "ignore" }).status === 0;
 }
 
+/**
+ * True when ngrok has an authtoken. `ngrok config check` only reports through its exit code;
+ * its output is discarded so the config (and any token) is never read, printed or logged.
+ */
+function ngrokConfigured(): boolean {
+  return spawnSync("ngrok", ["config", "check"], { stdio: "ignore" }).status === 0;
+}
+
 /** A throwaway SSH key and known_hosts for the SSH tunnels; removed on exit. */
 function makeSshDir(): string {
   if (sshDir !== null) return sshDir;
@@ -122,7 +130,7 @@ function startTunnel(provider: TunnelProvider, ctx: TunnelContext): Promise<stri
       const text = chunk.toString("utf8");
       if (verbose) process.stderr.write(text);
       const url = provider.findUrl(text);
-      if (url !== null && !found) {
+      if (url !== null) {
         found = true;
         clearTimeout(timer);
         resolve(url);
@@ -130,6 +138,27 @@ function startTunnel(provider: TunnelProvider, ctx: TunnelContext): Promise<stri
     };
     child.stdout.on("data", onData);
     child.stderr.on("data", onData);
+    const { apiUrl, urlFromApi } = provider;
+    if (apiUrl !== undefined && urlFromApi !== undefined) {
+      const poll = async (): Promise<void> => {
+        while (!found) {
+          try {
+            const res = await fetch(apiUrl, { signal: AbortSignal.timeout(2000) });
+            const url = res.ok ? urlFromApi(await res.json()) : null;
+            if (url !== null) {
+              found = true;
+              clearTimeout(timer);
+              resolve(url);
+              return;
+            }
+          } catch {
+            // The agent API is not up yet.
+          }
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      };
+      void poll();
+    }
     child.once("error", (e) => {
       clearTimeout(timer);
       reject(e);
@@ -186,7 +215,8 @@ function banner(link: string, note: string | null): void {
 const NOTES: Readonly<Record<string, string>> = {
   pinggy: "Pinggy's free tunnels end after 60 minutes. Restart to get a new link.",
   "localhost.run": "localhost.run's free links change after a few hours.",
-  ngrok: "Friends may see an ngrok warning page once; they click Visit Site.",
+  ngrok:
+    "Friends may see an ngrok warning page once; they click Visit Site. ngrok free tunnels have no time limit.",
 };
 
 async function main(): Promise<void> {
@@ -228,6 +258,12 @@ async function main(): Promise<void> {
     for (const provider of providers) {
       if (!hasBinary(provider.bin)) {
         tried.push(`${provider.id}: ${provider.bin} is not installed`);
+        continue;
+      }
+      if (provider.id === "ngrok" && !ngrokConfigured()) {
+        tried.push(
+          "ngrok: not configured (run `ngrok config add-authtoken <token>`, docs/PLAY_ONLINE.md)",
+        );
         continue;
       }
       process.stdout.write(`Trying ${provider.label}... `);

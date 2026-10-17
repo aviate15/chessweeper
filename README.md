@@ -29,7 +29,7 @@ pnpm --filter @chessweeper/web dev   # local pass-and-play at http://localhost:5
 
 ## Play online with friends
 
-`pnpm play` builds the game, serves it from your machine and shares it through a free public tunnel (Cloudflare, Pinggy, localhost.run or ngrok; `--tunnel <name>` forces one, `--local` skips the tunnel). No account is needed except for ngrok. Steps and limits are in [`docs/PLAY_ONLINE.md`](docs/PLAY_ONLINE.md).
+`pnpm play` builds the game, serves it from your machine and shares it through a free public tunnel (ngrok if configured, else Cloudflare, Pinggy or localhost.run; `--tunnel <name>` forces one, `--local` skips the tunnel). No account is needed except for ngrok. Steps and limits are in [`docs/PLAY_ONLINE.md`](docs/PLAY_ONLINE.md).
 
 Fly.io and Vercel hosting config exists in [`docs/DEPLOY.md`](docs/DEPLOY.md). It is optional and not used for now.
 
