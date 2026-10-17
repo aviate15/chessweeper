@@ -15,6 +15,8 @@ export interface Limits {
   readonly idleRoomMs: number;
   /** A room whose game is over is dropped this long after it ended, so both can load the result. */
   readonly finishedRoomMs: number;
+  /** Manual mine mode: how long each placement round lasts (design doc 3.10: 20 s). */
+  readonly placementMs: number;
 }
 
 export const DEFAULT_LIMITS: Limits = {
@@ -28,6 +30,7 @@ export const DEFAULT_LIMITS: Limits = {
   emptyRoomMs: 5 * 60_000,
   idleRoomMs: 30 * 60_000,
   finishedRoomMs: 2 * 60_000,
+  placementMs: 20_000,
 };
 
 export class TokenBucket {

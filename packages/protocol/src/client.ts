@@ -29,7 +29,11 @@ const settings = z
   .strictObject({
     reshuffleInterval: z.number().int().min(-1_000_000).max(1_000_000),
     densityPercent: z.number().int().min(-1_000_000).max(1_000_000),
+    // Manual mine mode (design doc 3.10). Absent means auto.
+    // Any other value is treated as auto by clampSettings (3.10: unknown means auto).
+    mode: z.unknown().optional(),
   })
+  // clampSettings carries `mode`; it is omitted from the result for auto games.
   .transform((raw) => clampSettings(raw));
 
 export const clientMessageSchema = z.discriminatedUnion("type", [
@@ -42,6 +46,9 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
     to: square,
     promo: z.enum(["n", "b", "r", "q"]).optional(),
   }),
+  z.strictObject({ type: z.literal("place"), sq: square }),
+  z.strictObject({ type: z.literal("unplace"), sq: square }),
+  z.strictObject({ type: z.literal("placement_done") }),
   z.strictObject({ type: z.literal("resign") }),
   z.strictObject({ type: z.literal("draw_offer") }),
   z.strictObject({ type: z.literal("draw_reply"), accept: z.boolean() }),
