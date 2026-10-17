@@ -2,3 +2,6 @@ pnpm-lock.yaml
 dist
 coverage
 LICENSE
+.claude/worktrees
+.claude/progress.md
+.playwright-mcp

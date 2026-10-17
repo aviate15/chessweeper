@@ -154,3 +154,8 @@ coverage/
 *.tsbuildinfo
 .vite/
 .claude/settings.local.json
+
+# Local agent state
+.claude/worktrees/
+.claude/progress.md
+.playwright-mcp/
