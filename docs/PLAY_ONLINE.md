@@ -37,22 +37,28 @@ Options: `pnpm play --local` (no tunnel, only `http://localhost:8080`), `pnpm pl
 
 In the default `auto` mode it tries, in order, and moves on when a link doesn't answer within about 30 seconds:
 
-| Tunnel                  | Needs                      | Goes out on  | Notes                                                                     |
-| ----------------------- | -------------------------- | ------------ | ------------------------------------------------------------------------- |
-| Cloudflare quick tunnel | `brew install cloudflared` | UDP/TCP 7844 | Best link when it works. Blocked on many campus, work and hotel networks. |
-| Pinggy                  | `ssh` (built in)           | TCP 443      | No account. Free links last 60 minutes, then restart.                     |
-| localhost.run           | `ssh` (built in)           | TCP 22       | No account. Links change after a few hours.                               |
-| ngrok                   | free account (below)       | HTTPS 443    | Only tried if installed. Friends click through one warning page.          |
+| Tunnel                  | Needs                      | Goes out on  | Notes                                                                                                |
+| ----------------------- | -------------------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
+| ngrok                   | free account (below)       | HTTPS 443    | Tried first, only if installed **and** configured. No session limit. Friends click one warning page. |
+| Cloudflare quick tunnel | `brew install cloudflared` | UDP/TCP 7844 | Best link when it works. Blocked on many campus, work and hotel networks.                            |
+| Pinggy                  | `ssh` (built in)           | TCP 443      | No account. Free links last 60 minutes, then restart.                                                |
+| localhost.run           | `ssh` (built in)           | TCP 22       | No account. Links change after a few hours.                                                          |
 
 The launcher prints which one it used and why the others were skipped.
 
-### Optional: ngrok (account needed, one time)
+### Recommended for long sessions: ngrok (free account, one time)
+
+ngrok's free tunnels have **no session time limit**, unlike Pinggy's 60 minutes.
 
 ```sh
 brew install ngrok
-ngrok config add-authtoken <your token from dashboard.ngrok.com>
-pnpm play --tunnel ngrok
+ngrok config add-authtoken <your token from dashboard.ngrok.com>   # you run this; never commit or share the token
+pnpm play            # ngrok is picked automatically; or: pnpm play --tunnel ngrok
 ```
+
+The launcher checks the setup with `ngrok config check` (exit code only; the token is never read or printed), starts ngrok, reads the public URL from ngrok's local API at `127.0.0.1:4040`, and gives that exact URL to the server as its allowed origin.
+
+Free plan limits: **1 GB of transfer and 20,000 HTTP requests per month**, plus an interstitial **warning page** the first time someone opens the link in a browser: they click **Visit Site** once. The launcher's own health checks send the `ngrok-skip-browser-warning` header. The warning page applies to browser page loads; the WebSocket is expected to work after the click, but this has not been checked live yet (note it if it fails for a friend).
 
 For a link that never changes, reserve your free dev domain in the ngrok dashboard and run `NGROK_DOMAIN=<name>.ngrok-free.dev pnpm play --tunnel ngrok`.
 

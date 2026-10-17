@@ -4,6 +4,8 @@
  *
  * Why several: Cloudflare's tunnel needs outbound port 7844, which many campus, work and hotel
  * networks block. The SSH-based ones go out on port 443 or 22, and ngrok uses HTTPS on 443.
+ * ngrok is tried first when it is installed and configured: its free tunnels have no session
+ * limit (Pinggy's end after 60 minutes).
  */
 
 export type TunnelId = "cloudflared" | "pinggy" | "localhost.run" | "ngrok";
@@ -24,6 +26,13 @@ export interface TunnelProvider {
   readonly args: (ctx: TunnelContext) => readonly string[];
   /** Finds the public https URL in a chunk of the tool's output, or null. */
   readonly findUrl: (text: string) => string | null;
+  /**
+   * Local HTTP API that lists the tunnel's public URL (ngrok's agent API). When set, the
+   * launcher polls it instead of parsing the tool's output, so nothing the tool prints matters.
+   */
+  readonly apiUrl?: string;
+  /** Reads the public https URL from the API's JSON body, or null while it is not there yet. */
+  readonly urlFromApi?: (body: unknown) => string | null;
   /** True when the tunnel adds Cloudflare's CF-Connecting-IP header. */
   readonly cloudflareHeaders: boolean;
 }
@@ -52,7 +61,35 @@ export function sshBase(ctx: TunnelContext): string[] {
   ];
 }
 
+/** ngrok's agent API: `{ tunnels: [{ public_url, proto }] }`. Picks the https public URL. */
+export function ngrokUrlFromApi(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || !("tunnels" in body)) return null;
+  const tunnels: unknown = body.tunnels;
+  if (!Array.isArray(tunnels)) return null;
+  for (const t of tunnels as unknown[]) {
+    if (typeof t !== "object" || t === null || !("public_url" in t)) continue;
+    const url: unknown = t.public_url;
+    if (typeof url === "string" && /^https:\/\/[a-z0-9.-]+$/.test(url)) return url;
+  }
+  return null;
+}
+
 export const TUNNELS: readonly TunnelProvider[] = [
+  {
+    id: "ngrok",
+    label: "ngrok",
+    bin: "ngrok",
+    // No --log flag: ngrok logs nothing by default. The URL comes from the local agent API.
+    args: (ctx) => [
+      "http",
+      `127.0.0.1:${String(ctx.port)}`,
+      ...(ctx.ngrokDomain === null ? [] : [`--url=https://${ctx.ngrokDomain}`]),
+    ],
+    findUrl: () => null,
+    apiUrl: "http://127.0.0.1:4040/api/tunnels",
+    urlFromApi: ngrokUrlFromApi,
+    cloudflareHeaders: false,
+  },
   {
     id: "cloudflared",
     label: "Cloudflare quick tunnel",
@@ -93,23 +130,6 @@ export const TUNNELS: readonly TunnelProvider[] = [
     ],
     // Free tunnels live on lhr.life; the welcome text also links admin.localhost.run.
     findUrl: (text) => first(/https:\/\/[a-z0-9]+\.lhr\.life/, text),
-    cloudflareHeaders: false,
-  },
-  {
-    id: "ngrok",
-    label: "ngrok (needs a free account)",
-    bin: "ngrok",
-    args: (ctx) => [
-      "http",
-      `127.0.0.1:${String(ctx.port)}`,
-      ...(ctx.ngrokDomain === null ? [] : [`--url=https://${ctx.ngrokDomain}`]),
-      "--log=stdout",
-      "--log-format=logfmt",
-    ],
-    findUrl: (text) => {
-      const m = /url=(https:\/\/[a-z0-9.-]+\.ngrok[a-z0-9.-]*)/.exec(text);
-      return m?.[1] ?? first(/https:\/\/[a-z0-9-]+\.ngrok-free\.(?:app|dev)/, text);
-    },
     cloudflareHeaders: false,
   },
 ];

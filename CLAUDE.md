@@ -43,7 +43,7 @@ Node 24 (`.nvmrc`; >=22 works), pnpm 12. Run from the repo root.
 - `pnpm check`: format:check, lint, typecheck and test. Must pass before saying work is done.
 - `pnpm build`: build packages that define a build script (none yet).
 - Dev servers (online play): `pnpm --filter @chessweeper/server dev` (ws://localhost:8080, allows the Vite dev origin) and `pnpm --filter @chessweeper/web dev` (http://localhost:5173). Open two browser windows to play. Set `VITE_SERVER_URL` for a non-default server; production builds need it for Online... to be enabled.
-- `pnpm play`: build, serve the game and web app from this machine and share it with a free public tunnel, trying cloudflared, Pinggy, localhost.run, then ngrok (`--tunnel <name>` to force one, `--local` for no tunnel, `--verbose` for their output). See `docs/PLAY_ONLINE.md`.
+- `pnpm play`: build, serve the game and web app from this machine and share it with a free public tunnel, trying ngrok (if installed and configured), cloudflared, Pinggy, then localhost.run (`--tunnel <name>` to force one, `--local` for no tunnel, `--verbose` for their output). See `docs/PLAY_ONLINE.md`.
 - Deploy (kept for later): `docs/DEPLOY.md`. `pnpm --filter @chessweeper/server build` bundles the server to `dist/main.js` (`start` runs it); `pnpm --filter @chessweeper/server smoke -- --server <url> --web <url>` is the post-deploy check.
 - `pnpm --filter @chessweeper/web e2e`: builds the client against a local server and runs Playwright, including the two-player online test.
 
