@@ -117,6 +117,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 ### 3.7 Reshuffle (full reset, anti-stall)
 
 - `[D]` Every **N total turns** (N = `reshuffleInterval`, default **6**: 3 per player) without a capture, all mines are randomly reshuffled. This keeps the game moving. It replaces the original idea ("a mine flagged for more than 5 moves triggers a random reset"). N is chosen per game (3.9).
+- `[D]` **Manual mine mode exception (3.10):** the reshuffle falls every N turns regardless of captures. Captures never reset the counter there; everything else in this bullet (completed turns, chains count once, freezes) still applies.
 - `[D]` The counter starts at 0 at game start and resets to 0 after each reshuffle. It counts completed turns; a check-exception chain counts as one turn. Any turn in which a piece is captured resets it to 0, including an en passant capture whose capturer then explodes. A turn with an explosion counts as a normal turn and does not reset it. The counter does not change while a chain is pending or on the turn that ends the game.
 - `[D]` **Timing**: the reshuffle fires at the very end of a turn, after the whole check-exception chain and the game-end checks, and only if the game continues.
 - `[D]` Placement is **random** over all unoccupied squares, with no exclusions (not even near kings), except the **spread limit** of 3.1: at most 2 mines in any 3x3 area, so fewer mines are placed when the limit leaves no room (more likely in dense endgames; `Reshuffled` and the live mine count report what was actually placed). Never on an occupied square. Mines may land on empty squares on ranks 1-2 and 7-8.
@@ -133,7 +134,7 @@ Chess meets Minesweeper. Mines are hidden on the board. Placing pieces reveals n
 5. If a king reaches 0 lives, the game ends and that side loses (3.6 precedence).
 6. If an explosion left the mover's own king in check, the same side moves again (3.4). This is still the same turn: go back to step 1. No resolving move = checkmate.
 7. Otherwise the turn passes. Check, checkmate and stalemate are evaluated for the opponent.
-8. End of turn, only if the turn passed and the game continues: the no-capture counter updates (a capture resets it). At `reshuffleInterval` (default 6) turns a reshuffle fires and the counter resets. Events: `Reshuffled` is public; `MineRelocated` (safe start) is server-only and never sent to clients.
+8. End of turn, only if the turn passed and the game continues: the turn counter updates (in Auto mode a capture resets it; in Manual mode it never does, 3.10). At `reshuffleInterval` (default 6) turns a reshuffle fires and the counter resets. Events: `Reshuffled` is public; `MineRelocated` (safe start) is server-only and never sent to clients.
 
 ### 3.9 Per-game settings (2026-10-17)
 
@@ -181,7 +182,7 @@ A second game mode. **Auto mine** is everything above, unchanged. In **Manual mi
 - `[D]` If the blast takes the last life of both kings, the **mover loses** (3.6 precedence).
 - `[T]` Only a king that lands on the big mine and survives reveals that square (3.2). Pieces and kings merely caught in the area reveal nothing.
 - `[T]` After a blast, the check exception (3.4) applies if the mover's piece was destroyed and the mover's own king is in check. Otherwise check, checkmate and stalemate are evaluated for the opponent on the board left by the blast. If the blast leaves the _opponent_ in check, that is ordinary check.
-- `[T]` Blast kills are not captures: the no-capture counter is not reset (3.7). A turn with a blast counts as a normal turn.
+- `[D]` **Fixed reshuffle cadence** (2026-10-17): in Manual mode mines reshuffle (a new placement round) every N turns, N being the per-game interval (default 10), both players' turns counted together. Captures, blasts and explosions never reset the counter; a check-exception chain counts once; the counter freezes while a chain is pending and on the turn that ends the game; a placement round restarts it at 0.
 - `[T]` Castling lands the king first. If the king's blast destroys the castling rook, the rook move does not happen. A rook landing on a big mine blasts like any piece.
 - `[T]` En passant: the captured pawn is removed first, then the capturer's landing resolves, blast included.
 - `[T]` A pawn destroyed by a blast on its promotion square does not promote and is reported as a pawn (3.5).
@@ -251,6 +252,7 @@ Parked on 2026-10-16. Aviate is unsure of the mechanics, and the 8-turn full res
 
 ## 8. Change log
 
+- 2026-10-17: Manual mine mode reshuffles every N turns regardless of captures (3.7, 3.10); Auto mode keeps its capture reset.
 - 2026-10-17: Manual mine mode added as section 3.10 (moved from docs/IDEAS.md): secret placement rounds at start and after each reshuffle, stacked big mines blasting 3x3, 20 s online timer with random fill on timeout, interval default 10. Decisions by Aviate: no chain reaction, 1 life per king, mover loses if both kings die, no spread limit, opponent sees only placing/ready, timer runs on through a disconnect.
 - 2026-10-17: Playtest 3. Reshuffle interval default is now 6 and mine density default 30% (10 starting mines), chosen with a seeded simulation of the real engine (`pnpm --filter @chessweeper/engine sim`): at most 2 mines in any 3x3 area, for the start and for reshuffles, not for safe-start relocation (3.1, 3.7). Interval and density are chosen per game (3.9): Create game online, New game... locally; the server clamps them; both players see them in the waiting room, status bar and Rules page. Game → Options removed (section 6).
 - 2026-10-16: `pnpm play` falls back across tunnel services (cloudflared, Pinggy, localhost.run, ngrok) because some networks block Cloudflare's port. Hosting only, no rule changes.

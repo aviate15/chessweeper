@@ -122,8 +122,10 @@ export function resolveMove(state: GameState, move: Move, rng: Rng): Resolution 
   // 3.7, 3.8 step 8: only a completed turn in a game that goes on counts. A pending chain
   // and the game-ending turn leave the counter alone, and neither can trigger a reshuffle.
   // A capture earlier in a check-exception chain still makes this a capture turn. Blast
-  // kills are not captures (3.10).
-  const captured = state.hidden.chainCaptured || legal.captured !== null;
+  // kills are not captures (3.10). In Manual mode captures never reset the counter: the
+  // reshuffle falls every N turns regardless (3.10).
+  const captured =
+    state.config.mode !== "manual" && (state.hidden.chainCaptured || legal.captured !== null);
   let noCaptureCount = state.public.noCaptureCount;
   let round = state.hidden.placementRound ?? 0;
   let nextPhase: Phase | null = null;
