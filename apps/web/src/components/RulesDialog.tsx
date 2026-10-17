@@ -273,8 +273,10 @@ export function RulesDialog({
         <h3>The reshuffle</h3>
         <ul>
           <li>
-            After {settings.reshuffleInterval} turns in a row without a capture (counting both
-            players), all mines are reshuffled. The reshuffle countdown is always shown.
+            {manual
+              ? `Every ${String(settings.reshuffleInterval)} turns (counting both players), captures or not, `
+              : `After ${String(settings.reshuffleInterval)} turns in a row without a capture (counting both players), `}
+            all mines are reshuffled. The reshuffle countdown is always shown.
           </li>
           {manual ? (
             <li>

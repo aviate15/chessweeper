@@ -239,14 +239,14 @@ describe("3.10 blast kills are not captures", () => {
     expect(state.public.noCaptureCount).toBe(4);
   });
 
-  it("an ordinary capture still resets it", () => {
+  it("an ordinary capture does not reset it in Manual mode (fixed cadence)", () => {
     const game = manual({
       fen: "4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1",
       owned: { w: ["a3"], b: ["a3"] },
       noCaptureCount: 3,
     });
     const { state } = play(game, "e4d5");
-    expect(state.public.noCaptureCount).toBe(0);
+    expect(state.public.noCaptureCount).toBe(4);
   });
 });
 
@@ -306,8 +306,8 @@ describe("3.10 en passant with a big mine", () => {
     expect(state.position.board[sq("d5")]).toBeNull(); // captured pawn
     expect(state.position.board[sq("d6")]).toBeNull(); // capturer died in the blast
     expect(state.public.craters.has(sq("d6"))).toBe(true);
-    // The en passant capture is a real capture: it resets the counter (3.7).
-    expect(state.public.noCaptureCount).toBe(0);
+    // 3.10: Manual mode counts every turn, captures included.
+    expect(state.public.noCaptureCount).toBe(5);
   });
 });
 
