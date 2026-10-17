@@ -1,4 +1,4 @@
-# Play online from your laptop (free, no account)
+# Play online from your laptop (free)
 
 One command runs the game server on your laptop and exposes it through a free public tunnel. Friends open one link and play. There is no hosting and no cost. `pnpm play` tries several tunnel services in turn and uses the first one your network lets through, because some networks block some of them.
 
@@ -6,10 +6,11 @@ One command runs the game server on your laptop and exposes it through a free pu
 
 ```sh
 pnpm install
-brew install cloudflared   # optional but recommended (first choice)
+brew install ngrok         # recommended for long sessions (free account, see below)
+# or: brew install cloudflared   # no account, but blocked on some networks
 ```
 
-You don't need anything else for the SSH tunnels (Pinggy, localhost.run): they use the `ssh` already on your Mac.
+Nothing else is needed for the SSH tunnels (Pinggy, localhost.run): they use the `ssh` already on your Mac.
 
 ## Run
 
@@ -21,7 +22,7 @@ It builds the web app and the server, starts the tunnel, starts the server, and 
 
 ```
 Chessweeper is up.
-  Public link: https://charges-stated-chat-mail.trycloudflare.com   (copied)
+  Public link: https://<random-name>.trycloudflare.com   (copied)
   On this machine:  http://localhost:8080
 ```
 
@@ -64,11 +65,11 @@ For a link that never changes, reserve your free dev domain in the ngrok dashboa
 
 ## What friends see
 
-The same game at the trycloudflare address. Online play works with no configuration because the page and the game server share one address (the client connects to `wss://<same host>/ws`).
+The same game at the public link. Online play works with no configuration because the page and the game server share one address (the client connects to `wss://<same host>/ws`).
 
 ## Limits
 
-- It works **only while your laptop is awake and the command is running.** Closing the lid sleeps the laptop; `pnpm play` keeps it awake otherwise (macOS).
+- It works **only while your laptop is awake and the command is running.** Closing the lid sleeps the laptop; `pnpm play` keeps it awake otherwise (macOS, via `caffeinate`; `caffeinate -dims` by hand also works).
 - **Ctrl+C, a crash or a restart drops every live game.** Rooms live in memory.
 - **The link changes every run.** Old invite links stop working.
 - Quick tunnels are best effort, with no uptime promise from Cloudflare.
@@ -84,7 +85,8 @@ The same game at the trycloudflare address. Online play works with no configurat
 
 ## Troubleshooting
 
-- **"cloudflared is not installed"** in the list: fine, the next tunnel is tried. `brew install cloudflared` if you want it as first choice.
+- **"ngrok: not configured" or "cloudflared is not installed"** in the list: fine, the next tunnel is tried.
+- **Origin or "not allowed" errors:** the server allows only the exact public link of this run. Restart `pnpm play` and use the new link.
 - **"Port 8080 is busy"**: stop the other program, or `PLAY_PORT=8099 pnpm play`.
 - **"No public tunnel worked"**: your network blocks them all. Try another network or a phone hotspot, or set up ngrok; run with `--verbose` to see why each failed.
 - **Friend sees an error page (for example 530)**: the tunnel dropped, or Pinggy's 60 minutes ended. Stop and run `pnpm play` again; you get a new link.
